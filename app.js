@@ -79,6 +79,8 @@
   };
 
   let state = restoreState() || createInitialState();
+  let activeGroupId = state.groups[0]?.id || null;
+  const groupFieldErrors = new Map();
   let buyerDraft = new Map();
   let activeBuyerGroupId = null;
   let activeImportGroupId = null;
@@ -302,41 +304,71 @@
   }
 
   function renderGroups() {
-    elements.groupList.innerHTML = state.groups.map((group, index) => renderGroup(group, index)).join("");
+    if (!state.groups.some((group) => group.id === activeGroupId)) {
+      activeGroupId = state.groups[0]?.id || null;
+    }
+    const activeIndex = state.groups.findIndex((group) => group.id === activeGroupId);
+    const activeGroup = state.groups[activeIndex];
+    elements.groupList.innerHTML = `
+      <div class="group-tabs-shell">
+        <div class="group-tabs" role="tablist" aria-label="配置组切换">
+          ${state.groups.map((group, index) => renderGroupTab(group, index, group.id === activeGroupId)).join("")}
+        </div>
+      </div>
+      ${activeGroup ? renderGroup(activeGroup, activeIndex) : ""}`;
+    if (activeGroup && groupFieldErrors.has(activeGroup.id)) {
+      const card = elements.groupList.querySelector(`.group-panel[data-group-id="${cssEscape(activeGroup.id)}"]`);
+      if (card) {
+        Object.entries(groupFieldErrors.get(activeGroup.id)).forEach(([kind, message]) => {
+          setGroupFieldError(card, kind, message);
+        });
+      }
+    }
     elements.groupCount.textContent = state.groups.length;
     updateSummary();
+    ensureActiveTabVisible();
+  }
+
+  function renderGroupTab(group, index, active) {
+    const complete = hasRequiredGroupFields(group);
+    const statusText = complete ? "已配置" : "待完善";
+    return `
+      <button class="group-tab${active ? " active" : ""}${complete ? "" : " is-incomplete"}${groupFieldErrors.has(group.id) ? " has-error" : ""}" id="group-tab-${escapeHtml(group.id)}" type="button" role="tab" aria-selected="${active}" aria-controls="group-panel-${escapeHtml(group.id)}" tabindex="${active ? "0" : "-1"}" data-action="select-group" data-group-id="${escapeHtml(group.id)}" title="配置组 ${index + 1} · ${statusText}">
+        <span class="tab-index">${String(index + 1).padStart(2, "0")}</span>
+        <span class="tab-copy">
+          <strong>配置组 ${index + 1}</strong>
+          <small>${escapeHtml(tabSummary(group))}</small>
+        </span>
+        <span class="tab-status" aria-hidden="true"></span>
+        <span class="sr-only">${statusText}</span>
+      </button>`;
   }
 
   function renderGroup(group, index) {
     const complete = hasRequiredGroupFields(group);
     const summary = groupSummary(group);
     return `
-      <article class="group-card${group.collapsed ? " collapsed" : ""}" data-group-id="${escapeHtml(group.id)}">
-        <header class="group-header">
-          <button class="group-toggle" type="button" data-action="toggle-group" data-group-id="${escapeHtml(group.id)}" aria-expanded="${!group.collapsed}" aria-controls="group-body-${escapeHtml(group.id)}">
-            <span class="group-index">${String(index + 1).padStart(2, "0")}</span>
-            <span class="group-title-wrap" id="group-label-${escapeHtml(group.id)}">
-              <span class="group-title-line">
-                <strong>配置组 ${index + 1}</strong>
-                <span class="group-state${complete ? "" : " incomplete"}">${complete ? "已配置" : "待完善"}</span>
-              </span>
-              <span class="group-summary">${escapeHtml(summary)}</span>
+      <article class="group-card group-panel" id="group-panel-${escapeHtml(group.id)}" role="tabpanel" aria-labelledby="group-tab-${escapeHtml(group.id)}" data-group-id="${escapeHtml(group.id)}" tabindex="0">
+        <header class="group-panel-header">
+          <div class="group-panel-heading">
+            <span class="panel-eyebrow">当前配置组</span>
+            <span class="group-title-line">
+              <strong>配置组 ${index + 1}</strong>
+              <span class="group-state${complete ? "" : " incomplete"}">${complete ? "已配置" : "待完善"}</span>
             </span>
-          </button>
+            <span class="group-summary group-panel-summary">${escapeHtml(summary)}</span>
+          </div>
           <div class="group-actions">
-            <button class="group-action" type="button" data-action="copy-group" data-group-id="${escapeHtml(group.id)}" aria-label="复制配置组 ${index + 1}" title="复制本组并插入到下一行">
+            <button class="group-action" type="button" data-action="copy-group" data-group-id="${escapeHtml(group.id)}" aria-label="复制配置组 ${index + 1}，并新增一个相同配置的 Tab" title="复制本组并新增 Tab">
               <svg viewBox="0 0 18 18" width="14" height="14" aria-hidden="true"><rect x="6" y="6" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M4 11H3.5A1.5 1.5 0 0 1 2 9.5v-6A1.5 1.5 0 0 1 3.5 2h6A1.5 1.5 0 0 1 11 3.5V4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
               <span class="action-label">复制本组</span>
             </button>
             <button class="group-action danger icon-only" type="button" data-action="remove-group" data-group-id="${escapeHtml(group.id)}" aria-label="删除配置组 ${index + 1}" title="删除配置组"${state.groups.length === 1 ? " disabled" : ""}>
               <svg viewBox="0 0 18 18" width="14" height="14" aria-hidden="true"><path d="M4 5h10M7 5V3h4v2m-6 0 .6 10h4.8L11 5" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
-            <button class="group-action icon-only" type="button" data-action="toggle-group" data-group-id="${escapeHtml(group.id)}" aria-label="${group.collapsed ? "展开" : "收起"}配置组 ${index + 1}" title="${group.collapsed ? "展开" : "收起"}">
-              <svg class="chevron" viewBox="0 0 18 18" width="15" height="15" aria-hidden="true"><path d="m5 7 4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
           </div>
         </header>
-        <div class="group-body" id="group-body-${escapeHtml(group.id)}"${group.collapsed ? " hidden" : ""}>
+        <div class="group-body">
           <div class="field buyer-field" data-group-field="buyers">
             <div class="buyer-heading-row">
               <span class="field-label"><span class="required">*</span>应用买家</span>
@@ -444,6 +476,10 @@
     return parts.join(" · ") || "尚未完成配置";
   }
 
+  function tabSummary(group) {
+    return `${group.buyers.length} 买家 · ${group.channels.length} 渠道`;
+  }
+
   function hasRequiredGroupFields(group) {
     return group.buyers.length > 0 && group.channels.length > 0;
   }
@@ -526,11 +562,17 @@
   }
 
   function clearValidation() {
+    groupFieldErrors.clear();
     elements.form.querySelectorAll(".is-invalid").forEach((node) => node.classList.remove("is-invalid"));
     elements.form.querySelectorAll(".field-error").forEach((node) => {
       node.textContent = "";
     });
     elements.form.querySelectorAll(".fee-row").forEach((node) => node.classList.remove("is-invalid"));
+    elements.groupList.querySelectorAll(".group-tab").forEach((tab) => {
+      tab.classList.remove("has-error");
+      const group = findGroup(tab.dataset.groupId);
+      if (group) updateGroupTabStatus(tab, group);
+    });
   }
 
   function setFieldError(id, message) {
@@ -547,18 +589,6 @@
     card.classList.add("is-invalid");
     const errorNode = card.querySelector(`[data-group-error="${kind}"]`);
     if (errorNode) errorNode.textContent = message;
-  }
-
-  function expandGroupCard(card, group) {
-    group.collapsed = false;
-    card.classList.remove("collapsed");
-    card.querySelector(".group-body")?.removeAttribute("hidden");
-    card.querySelector(".group-toggle")?.setAttribute("aria-expanded", "true");
-    card.querySelectorAll('[data-action="toggle-group"]').forEach((button) => {
-      if (button.classList.contains("group-toggle")) return;
-      button.setAttribute("aria-label", "收起配置组");
-      button.setAttribute("title", "收起");
-    });
   }
 
   function validateForPublish() {
@@ -616,20 +646,25 @@
       issueCount += 1;
     }
 
+    const invalidGroups = [];
     state.groups.forEach((group, index) => {
-      const card = elements.groupList.querySelector(`[data-group-id="${cssEscape(group.id)}"]`);
-      if (!card) return;
+      const errors = {};
       if (!group.buyers.length) {
-        if (group.collapsed) expandGroupCard(card, group);
-        setGroupFieldError(card, "buyers", `配置组 ${index + 1} 请至少选择 1 个买家`);
+        errors.buyers = `配置组 ${index + 1} 请至少选择 1 个买家`;
         issueCount += 1;
       }
       if (!group.channels.length) {
-        if (group.collapsed) expandGroupCard(card, group);
-        setGroupFieldError(card, "channels", `配置组 ${index + 1} 请至少选择 1 个渠道`);
+        errors.channels = `配置组 ${index + 1} 请至少选择 1 个渠道`;
         issueCount += 1;
       }
+      if (Object.keys(errors).length) invalidGroups.push({ group, index, errors });
     });
+
+    if (invalidGroups.length) {
+      activeGroupId = invalidGroups[0].group.id;
+      invalidGroups.forEach(({ group, errors }) => groupFieldErrors.set(group.id, errors));
+      renderGroups();
+    }
 
     updateSummary();
     if (issueCount > 0) {
@@ -672,6 +707,7 @@
       collapsed: false
     };
     state.groups.push(group);
+    activeGroupId = group.id;
     renderGroups();
     markDirty();
     scrollToGroup(group.id);
@@ -694,6 +730,7 @@
     const source = state.groups[state.groups.length - 1];
     const copy = cloneGroup(source);
     state.groups.push(copy);
+    activeGroupId = copy.id;
     renderGroups();
     markDirty();
     scrollToGroup(copy.id);
@@ -705,6 +742,7 @@
     if (index < 0) return;
     const copy = cloneGroup(state.groups[index]);
     state.groups.splice(index + 1, 0, copy);
+    activeGroupId = copy.id;
     renderGroups();
     markDirty();
     scrollToGroup(copy.id);
@@ -716,6 +754,9 @@
     const index = state.groups.findIndex((group) => group.id === groupId);
     if (index < 0) return;
     state.groups.splice(index, 1);
+    if (activeGroupId === groupId) {
+      activeGroupId = state.groups[Math.min(index, state.groups.length - 1)]?.id || null;
+    }
     renderGroups();
     markDirty();
     showToast(`已删除配置组 ${index + 1}`);
@@ -723,25 +764,35 @@
 
   function scrollToGroup(groupId) {
     requestAnimationFrame(() => {
-      const card = elements.groupList.querySelector(`[data-group-id="${cssEscape(groupId)}"]`);
-      card?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const card = elements.groupList.querySelector(`.group-panel[data-group-id="${cssEscape(groupId)}"]`);
+      card?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
 
-  function toggleGroup(groupId, forceExpanded) {
-    const group = findGroup(groupId);
-    const card = elements.groupList.querySelector(`[data-group-id="${cssEscape(groupId)}"]`);
-    if (!group || !card) return;
-    group.collapsed = typeof forceExpanded === "boolean" ? !forceExpanded : !group.collapsed;
-    card.classList.toggle("collapsed", group.collapsed);
-    card.querySelector(".group-body")?.toggleAttribute("hidden", group.collapsed);
-    card.querySelector(".group-toggle")?.setAttribute("aria-expanded", String(!group.collapsed));
-    const collapseButton = card.querySelector('.group-action[aria-label$="' + (group.collapsed ? "收起" : "展开") + '"]');
-    if (collapseButton) {
-      collapseButton.setAttribute("aria-label", `${group.collapsed ? "展开" : "收起"}配置组`);
-      collapseButton.setAttribute("title", group.collapsed ? "展开" : "收起");
-    }
-    markDirty();
+  function selectGroup(groupId) {
+    if (!findGroup(groupId)) return;
+    if (activeGroupId === groupId) return;
+    activeGroupId = groupId;
+    renderGroups();
+    requestAnimationFrame(() => {
+      elements.groupList.querySelector(`#group-tab-${cssEscape(groupId)}`)?.focus({ preventScroll: true });
+    });
+  }
+
+  function ensureActiveTabVisible() {
+    requestAnimationFrame(() => {
+      const activeTab = elements.groupList.querySelector('.group-tab[aria-selected="true"]');
+      if (!activeTab) return;
+      const tabs = activeTab.closest(".group-tabs");
+      if (!tabs) return;
+      const tabsRect = tabs.getBoundingClientRect();
+      const tabRect = activeTab.getBoundingClientRect();
+      if (tabRect.left < tabsRect.left) {
+        tabs.scrollBy({ left: tabRect.left - tabsRect.left - 8, behavior: "smooth" });
+      } else if (tabRect.right > tabsRect.right) {
+        tabs.scrollBy({ left: tabRect.right - tabsRect.right + 8, behavior: "smooth" });
+      }
+    });
   }
 
   function getAvailableBuyers(group) {
@@ -1033,14 +1084,28 @@
   function updateGroupTitle(card) {
     const group = findGroup(card.dataset.groupId);
     const index = state.groups.findIndex((item) => item.id === group?.id);
-    const title = card.querySelector(".group-title-wrap");
+    const title = card.querySelector(".group-panel-heading");
     if (!group || !title) return;
+    const complete = hasRequiredGroupFields(group);
     title.innerHTML = `
+      <span class="panel-eyebrow">当前配置组</span>
       <span class="group-title-line">
         <strong>配置组 ${index + 1}</strong>
-        <span class="group-state${hasRequiredGroupFields(group) ? "" : " incomplete"}">${hasRequiredGroupFields(group) ? "已配置" : "待完善"}</span>
+        <span class="group-state${complete ? "" : " incomplete"}">${complete ? "已配置" : "待完善"}</span>
       </span>
-      <span class="group-summary">${escapeHtml(groupSummary(group))}</span>`;
+      <span class="group-summary group-panel-summary">${escapeHtml(groupSummary(group))}</span>`;
+    const tab = elements.groupList.querySelector(`#group-tab-${cssEscape(group.id)}`);
+    if (tab) {
+      tab.querySelector(".tab-copy small").textContent = tabSummary(group);
+      updateGroupTabStatus(tab, group);
+    }
+  }
+
+  function updateGroupTabStatus(tab, group) {
+    const complete = hasRequiredGroupFields(group);
+    tab.classList.toggle("is-incomplete", !complete);
+    tab.setAttribute("aria-label", `${tab.querySelector(".tab-copy strong")?.textContent || "配置组"}，${complete ? "已配置" : "待完善"}`);
+    tab.title = `${tab.querySelector(".tab-copy strong")?.textContent || "配置组"} · ${complete ? "已配置" : "待完善"}`;
   }
 
   function openPublishDialog() {
@@ -1232,13 +1297,15 @@
       const actionButton = event.target.closest("[data-action]");
       if (!actionButton) return;
       const action = actionButton.dataset.action;
+      if (action === "select-group") {
+        selectGroup(actionButton.dataset.groupId);
+        return;
+      }
       const card = actionButton.closest(".group-card");
       const group = findGroup(card?.dataset.groupId);
       if (!group) return;
 
-      if (action === "toggle-group") {
-        toggleGroup(group.id);
-      } else if (action === "copy-group") {
+      if (action === "copy-group") {
         copyGroup(group.id);
       } else if (action === "remove-group") {
         removeGroup(group.id);
@@ -1276,6 +1343,27 @@
     });
 
     elements.groupList.addEventListener("keydown", (event) => {
+      const tab = event.target.closest('.group-tab');
+      if (tab) {
+        const tabs = [...elements.groupList.querySelectorAll('.group-tab')];
+        const currentIndex = tabs.indexOf(tab);
+        let nextIndex = null;
+        if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % tabs.length;
+        else if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+        else if (event.key === "Home") nextIndex = 0;
+        else if (event.key === "End") nextIndex = tabs.length - 1;
+        if (nextIndex !== null) {
+          event.preventDefault();
+          const nextTab = tabs[nextIndex];
+          activeGroupId = nextTab.dataset.groupId;
+          renderGroups();
+          requestAnimationFrame(() => {
+            elements.groupList.querySelector(`#group-tab-${cssEscape(activeGroupId)}`)?.focus({ preventScroll: true });
+          });
+        }
+        return;
+      }
+
       const input = event.target.closest("[data-tag-input]");
       if (!input) return;
       if (event.key === "Enter" || event.key === "," || event.key === "，") {
@@ -1295,7 +1383,12 @@
       const group = findGroup(card?.dataset.groupId);
       const value = input.value;
       input.value = "";
-      if (group) addPriceTag(group, value);
+      if (!group) return;
+      if (event.relatedTarget instanceof Element && event.relatedTarget.closest('[role="tab"]')) {
+        window.setTimeout(() => addPriceTag(group, value), 0);
+      } else {
+        addPriceTag(group, value);
+      }
     });
 
     elements.groupList.addEventListener("mousedown", (event) => {
