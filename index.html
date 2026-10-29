@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="多配置组报价配置交互原型：将买家、渠道、买家类型和价格标签合并为可复制的配置组。">
+  <title>多配置组报价配置｜交互原型</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%230f766e'/%3E%3Cpath d='M18 20h28v9H18zm0 15h12v9H18zm17 0h11v9H35z' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css?v=20261029-3">
+  <script src="app.js?v=20261029-3" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">跳到主要内容</a>
+
+  <header class="topbar">
+    <a class="product" href="./" aria-label="运营配置台首页">
+      <span class="product-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm12.5 0L21 17.5 16.5 22 12 17.5z" fill="currentColor"/></svg>
+      </span>
+      <span class="product-copy"><strong>运营配置台</strong><small>Quote Console</small></span>
+    </a>
+    <nav class="topnav" aria-label="主导航">
+      <a href="#">工作台</a>
+      <a class="active" href="#">报价配置</a>
+      <a href="#">规则中心</a>
+      <a href="#">操作日志</a>
+    </nav>
+    <div class="environment"><span></span>演示环境</div>
+  </header>
+
+  <main class="page" id="main-content">
+    <div class="breadcrumb" aria-label="面包屑导航">
+      <a href="#">回收运营</a><span>/</span><a href="#">报价配置</a><span>/</span><strong>新建配置</strong>
+    </div>
+
+    <section class="page-heading" aria-labelledby="page-title">
+      <div class="heading-copy">
+        <div class="title-line">
+          <h1 id="page-title">新建报价配置</h1>
+          <span class="status-chip" id="page-status">未保存</span>
+          <span class="demo-chip">示例数据</span>
+        </div>
+        <p>配置回收报价的适用对象与价格规则。一个配置可维护多个配置组，相同价格规则下按组匹配不同买家与渠道。</p>
+      </div>
+      <div class="heading-actions" aria-label="页面操作">
+        <button class="button ghost" type="button" id="save-draft">
+          <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M4 3h9l3 3v11H4zM7 3v5h6V3M7 13h6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          保存草稿
+        </button>
+        <button class="button primary" type="button" id="publish-config">
+          发布配置
+          <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="m7 4 6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </section>
+
+    <div class="workspace">
+      <form class="form-column" id="config-form" novalidate>
+        <section class="card" id="basic-section" aria-labelledby="basic-title">
+          <div class="card-heading">
+            <div>
+              <span class="section-kicker">01 · CONFIG</span>
+              <h2 id="basic-title">基础信息</h2>
+              <p>用于识别配置并控制优先级、生效状态。</p>
+            </div>
+          </div>
+
+          <div class="field-grid basic-grid">
+            <div class="field field-wide">
+              <label for="config-name"><span class="required">*</span>配置名称</label>
+              <input id="config-name" name="configName" type="text" maxlength="60" placeholder="请输入配置名称" autocomplete="off">
+              <p class="field-hint">建议包含业务范围与价格特征，最多 60 个字符。</p>
+              <p class="field-error" data-error-for="config-name"></p>
+            </div>
+
+            <div class="field field-narrow">
+              <label for="priority"><span class="required">*</span>优先级</label>
+              <div class="input-suffix">
+                <input id="priority" name="priority" type="number" min="1" max="999" step="1" placeholder="请输入优先级" inputmode="numeric">
+                <span>级</span>
+              </div>
+              <p class="field-hint">数字越小，匹配优先级越高。</p>
+              <p class="field-error" data-error-for="priority"></p>
+            </div>
+
+            <div class="field field-full">
+              <label for="config-description">配置描述</label>
+              <textarea id="config-description" name="configDescription" rows="3" maxlength="200" placeholder="请输入配置描述，便于后续识别配置用途"></textarea>
+              <div class="field-meta"><span class="field-hint">选填，最多 200 个字符。</span><span id="description-count">0 / 200</span></div>
+            </div>
+
+            <fieldset class="field field-half">
+              <legend>配置状态</legend>
+              <div class="segmented" role="radiogroup" aria-label="配置状态">
+                <label><input type="radio" name="status" value="enabled" checked><span><i></i>启用</span></label>
+                <label><input type="radio" name="status" value="disabled"><span><i></i>停用</span></label>
+              </div>
+              <p class="field-hint">停用后配置不参与报价匹配。</p>
+            </fieldset>
+
+            <div class="field field-half">
+              <label for="expiry-date">失效时间</label>
+              <input id="expiry-date" name="expiryDate" type="date">
+              <p class="field-hint">留空表示长期有效；失效后自动停止匹配。</p>
+              <p class="field-error" data-error-for="expiry-date"></p>
+            </div>
+          </div>
+        </section>
+
+        <section class="card" id="price-section" aria-labelledby="price-title">
+          <div class="card-heading split-heading">
+            <div>
+              <span class="section-kicker">02 · PRICING</span>
+              <h2 id="price-title">价格规则</h2>
+              <p>价格区间、费用与中标价差由全部配置组共用。</p>
+            </div>
+            <span class="scope-badge">
+              <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 8a5 5 0 1 0 10 0A5 5 0 0 0 3 8Zm2.5 0 1.7 1.7 3.3-3.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              全配置组共用
+            </span>
+          </div>
+
+          <div class="price-range-panel">
+            <div class="panel-label">
+              <span>报价区间</span>
+              <small>按回收金额设置可参与报价的上下限</small>
+            </div>
+            <div class="price-fields">
+              <div class="field">
+                <label for="min-price"><span class="required">*</span>最低价</label>
+                <div class="input-suffix"><span class="prefix">¥</span><input id="min-price" name="minPrice" type="number" min="0" step="1" placeholder="0" inputmode="numeric"><span>元</span></div>
+                <p class="field-error" data-error-for="min-price"></p>
+              </div>
+              <span class="range-separator" aria-hidden="true">—</span>
+              <div class="field">
+                <label for="max-price"><span class="required">*</span>最高价</label>
+                <div class="input-suffix"><span class="prefix">¥</span><input id="max-price" name="maxPrice" type="number" min="0" step="1" placeholder="500" inputmode="numeric"><span>元</span></div>
+                <p class="field-error" data-error-for="max-price"></p>
+              </div>
+              <div class="field differential-field">
+                <label for="bid-difference"><span class="required">*</span>中标价差
+                  <button class="info-dot" type="button" aria-label="中标价差说明" data-tooltip="中标价差用于校准不同买家最终成交价的差额。">i</button>
+                </label>
+                <div class="input-suffix"><input id="bid-difference" name="bidDifference" type="number" min="0" step="0.01" placeholder="请输入金额" inputmode="decimal"><span>元</span></div>
+                <p class="field-error" data-error-for="bid-difference"></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="fee-heading">
+            <div>
+              <h3>费用规则</h3>
+              <p>支持按固定金额或成交价比例计费。</p>
+            </div>
+            <button class="button secondary compact" type="button" id="add-fee">
+              <svg viewBox="0 0 18 18" width="15" height="15" aria-hidden="true"><path d="M9 4v10M4 9h10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+              添加费用
+            </button>
+          </div>
+          <div class="fee-table" id="fee-list" aria-live="polite"></div>
+          <p class="field-error fee-list-error" data-error-for="fees"></p>
+          <div class="pricing-note">
+            <svg viewBox="0 0 18 18" width="16" height="16" aria-hidden="true"><path d="M9 2.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM9 8v4M9 5.5v.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <span>费用规则为整条配置共用，不会因配置组数量增加而重复计算。</span>
+          </div>
+        </section>
+
+        <section class="card groups-card" id="groups-section" aria-labelledby="groups-title">
+          <div class="card-heading groups-heading">
+            <div>
+              <span class="section-kicker">03 · GROUPS</span>
+              <h2 id="groups-title">配置组 <span class="count-badge" id="group-count">0</span></h2>
+              <p>将买家、渠道、买家类型与价格标签组合为一组，支持添加多组。</p>
+            </div>
+            <div class="group-toolbar">
+              <button class="button secondary compact" type="button" id="copy-last-group">
+                <svg viewBox="0 0 18 18" width="15" height="15" aria-hidden="true"><rect x="6" y="6" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4 11H3.5A1.5 1.5 0 0 1 2 9.5v-6A1.5 1.5 0 0 1 3.5 2h6A1.5 1.5 0 0 1 11 3.5V4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+                复制上一组
+              </button>
+              <button class="button primary compact" type="button" id="add-group">
+                <svg viewBox="0 0 18 18" width="15" height="15" aria-hidden="true"><path d="M9 4v10M4 9h10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+                新增配置组
+              </button>
+            </div>
+          </div>
+
+          <div class="copy-tip" id="copy-tip">
+            <span class="copy-tip-icon" aria-hidden="true">↳</span>
+            <span><strong>复制上一组</strong>会完整沿用买家、渠道、买家类型和价格标签，再按需微调，减少重复录入。</span>
+          </div>
+
+          <div class="group-list" id="group-list" aria-live="polite"></div>
+          <p class="field-error group-list-error" data-error-for="groups"></p>
+        </section>
+      </form>
+
+      <aside class="sidebar" aria-label="配置概览">
+        <section class="summary-card">
+          <div class="summary-heading">
+            <div><span class="section-kicker">SUMMARY</span><h2>发布前检查</h2></div>
+            <div class="completion-ring" id="completion-ring" style="--progress:0deg" aria-label="配置完整度 0%"><span id="completion-value">0%</span></div>
+          </div>
+          <div class="check-list" id="check-list"></div>
+        </section>
+
+        <section class="overview-card">
+          <div class="summary-heading"><h2>配置概览</h2><span class="saved-state" id="saved-state">尚未保存</span></div>
+          <dl class="overview-list">
+            <div><dt>配置名称</dt><dd id="overview-name">未填写</dd></div>
+            <div><dt>优先级</dt><dd id="overview-priority">未填写</dd></div>
+            <div><dt>报价区间</dt><dd id="overview-range">未填写</dd></div>
+            <div><dt>配置组</dt><dd id="overview-group-count">0 组</dd></div>
+            <div><dt>覆盖买家</dt><dd id="overview-buyer-count">0 个</dd></div>
+            <div><dt>覆盖渠道</dt><dd id="overview-channel-count">0 个</dd></div>
+          </dl>
+        </section>
+
+        <section class="guide-card" aria-labelledby="guide-title">
+          <h2 id="guide-title">怎么配置</h2>
+          <ol>
+            <li><span>1</span><p>填写公共基础信息与价格规则。</p></li>
+            <li><span>2</span><p>新增配置组，选择买家、渠道、买家类型和价格标签。</p></li>
+            <li><span>3</span><p>需要相似配置时使用“复制上一组”，再修改差异项。</p></li>
+          </ol>
+          <p class="demo-note">本页为静态交互原型，全部买家、渠道和金额均为脱敏演示数据。</p>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <div class="mobile-actions" aria-label="移动端页面操作">
+    <button class="button ghost" type="button" id="mobile-save-draft">保存草稿</button>
+    <button class="button primary" type="button" id="mobile-publish">发布配置</button>
+  </div>
+
+  <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+
+  <dialog class="modal buyer-modal" id="buyer-picker-dialog" aria-labelledby="buyer-picker-title">
+    <div class="modal-shell">
+      <header class="modal-header">
+        <div>
+          <span class="modal-kicker">BUYER DIRECTORY</span>
+          <h2 id="buyer-picker-title">选择应用买家</h2>
+          <p>为当前配置组选择一个或多个已入驻买家。</p>
+        </div>
+        <button class="icon-button" type="button" data-close-dialog="buyer-picker-dialog" aria-label="关闭买家选择弹窗">
+          <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </button>
+      </header>
+      <div class="buyer-tools">
+        <label class="search-box">
+          <svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m12.3 12.3 4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <input id="buyer-search" type="search" placeholder="搜索买家名称或编号" autocomplete="off">
+        </label>
+        <span class="selected-count" id="buyer-selected-count">已选 0 个</span>
+      </div>
+      <div class="buyer-list" id="buyer-picker-list"></div>
+      <footer class="modal-footer">
+        <button class="button ghost" type="button" data-close-dialog="buyer-picker-dialog">取消</button>
+        <button class="button primary" type="button" id="apply-buyers">应用选择</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <dialog class="modal import-modal" id="buyer-import-dialog" aria-labelledby="buyer-import-title">
+    <div class="modal-shell">
+      <header class="modal-header">
+        <div>
+          <span class="modal-kicker">BATCH IMPORT</span>
+          <h2 id="buyer-import-title">批量导入买家</h2>
+          <p id="import-group-label">导入后将覆盖当前配置组的买家。</p>
+        </div>
+        <button class="icon-button" type="button" data-close-dialog="buyer-import-dialog" aria-label="关闭批量导入弹窗">
+          <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </button>
+      </header>
+      <div class="import-body">
+        <div class="dropzone" id="import-dropzone">
+          <input id="buyer-file" type="file" accept=".csv,.txt" hidden>
+          <span class="dropzone-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="24" height="24"><path d="M12 16V5m0 0L8 9m4-4 4 4M5 14v4h14v-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <strong>拖拽 CSV 文件到这里，或 <button type="button" id="select-file">选择文件</button></strong>
+          <p>支持 CSV / TXT，单次最多 2,000 条。可先下载模板整理数据。</p>
+        </div>
+        <div class="import-actions">
+          <button class="text-button" type="button" id="download-template">下载导入模板</button>
+          <span>或</span>
+          <button class="text-button" type="button" id="load-demo-buyers">载入演示文件</button>
+        </div>
+        <div class="import-preview" id="import-preview" hidden></div>
+        <p class="import-error" id="import-error" role="alert"></p>
+      </div>
+      <footer class="modal-footer">
+        <span class="import-footer-hint">仅演示本地解析，不会上传数据。</span>
+        <div>
+          <button class="button ghost" type="button" data-close-dialog="buyer-import-dialog">取消</button>
+          <button class="button primary" type="button" id="confirm-import" disabled>确认导入</button>
+        </div>
+      </footer>
+    </div>
+  </dialog>
+
+  <dialog class="modal publish-modal" id="publish-dialog" aria-labelledby="publish-title">
+    <div class="modal-shell compact-shell">
+      <header class="modal-header">
+        <div>
+          <span class="modal-kicker">READY TO PUBLISH</span>
+          <h2 id="publish-title">确认发布配置</h2>
+        </div>
+        <button class="icon-button" type="button" data-close-dialog="publish-dialog" aria-label="关闭发布确认弹窗">
+          <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </button>
+      </header>
+      <div class="publish-body">
+        <div class="publish-icon" aria-hidden="true">✓</div>
+        <p>发布后，该配置将按优先级参与买家与渠道匹配。原型环境不会写入真实业务数据。</p>
+        <dl class="publish-summary" id="publish-summary"></dl>
+      </div>
+      <footer class="modal-footer">
+        <button class="button ghost" type="button" data-close-dialog="publish-dialog">返回检查</button>
+        <button class="button primary" type="button" id="confirm-publish">确认发布</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <dialog class="modal success-modal" id="success-dialog" aria-labelledby="success-title">
+    <div class="modal-shell compact-shell">
+      <div class="success-content">
+        <div class="success-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" width="32" height="32"><path d="m8 16 5 5 11-11" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <span class="modal-kicker">PUBLISHED</span>
+        <h2 id="success-title">配置发布成功</h2>
+        <p>演示配置已生成。可在真实系统中继续配置日志、审核与灰度发布。</p>
+        <div class="config-id"><span>配置编号</span><strong id="published-id">CFG-DEMO</strong><button type="button" id="copy-config-id">复制</button></div>
+        <button class="button primary wide" type="button" data-close-dialog="success-dialog">完成</button>
+      </div>
+    </div>
+  </dialog>
+
+  <noscript><div class="noscript">请启用 JavaScript 以使用配置组交互原型。</div></noscript>
+</body>
+</html>
