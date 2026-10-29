@@ -1,8 +1,8 @@
 (() => {
   "use strict";
 
-  const STORAGE_KEY = "multi-group-quote-config-prototype-v2";
-  const PAGE_VERSION = 1;
+  const STORAGE_KEY = "multi-group-quote-config-prototype-v4";
+  const PAGE_VERSION = 2;
   const TODAY = new Date().toISOString().slice(0, 10);
 
   const CHANNELS = [
@@ -39,8 +39,6 @@
     pageStatus: document.querySelector("#page-status"),
     savedState: document.querySelector("#saved-state"),
     descriptionCount: document.querySelector("#description-count"),
-    feeList: document.querySelector("#fee-list"),
-    addFee: document.querySelector("#add-fee"),
     groupList: document.querySelector("#group-list"),
     groupCount: document.querySelector("#group-count"),
     addGroup: document.querySelector("#add-group"),
@@ -98,14 +96,6 @@
         status: "enabled",
         expiryDate: "2027-10-28"
       },
-      pricing: {
-        min: "1",
-        max: "500",
-        bidDifference: "20"
-      },
-      fees: [
-        { id: newId("fee"), name: "费用模块 1", type: "fixed", value: "12", cap: "50" }
-      ],
       groups: [
         {
           id: newId("group"),
@@ -113,7 +103,8 @@
           channels: ["闲鱼", "回收宝"],
           buyerTypes: ["商家买家"],
           priceTags: ["高价", "核心渠道"],
-          collapsed: false
+          pricing: { min: "1", max: "500", bidDifference: "20" },
+          fees: [{ id: newId("fee"), name: "渠道服务费", type: "fixed", value: "12", cap: "50" }]
         },
         {
           id: newId("group"),
@@ -121,7 +112,8 @@
           channels: ["京东", "抖音"],
           buyerTypes: ["渠道服务商"],
           priceTags: ["中高价"],
-          collapsed: true
+          pricing: { min: "501", max: "2000", bidDifference: "30" },
+          fees: [{ id: newId("fee"), name: "平台服务费", type: "ratio", value: "1.5", cap: "30" }]
         }
       ],
       customBuyers: [],
@@ -142,8 +134,18 @@
     return { id: buyer.id, name: buyer.name, company: buyer.company, tag: buyer.tag };
   }
 
+  function normalizeFee(fee = {}) {
+    return {
+      id: typeof fee.id === "string" ? fee.id : newId("fee"),
+      name: String(fee.name ?? ""),
+      type: fee.type === "ratio" ? "ratio" : "fixed",
+      value: String(fee.value ?? ""),
+      cap: String(fee.cap ?? "")
+    };
+  }
+
   function normalizeState(raw) {
-    if (!raw || raw.version !== PAGE_VERSION || !Array.isArray(raw.groups) || !raw.basic || !raw.pricing) {
+    if (!raw || raw.version !== PAGE_VERSION || !Array.isArray(raw.groups) || !raw.basic) {
       return null;
     }
 
@@ -155,7 +157,14 @@
       channels: Array.isArray(group.channels) ? group.channels.filter((item) => typeof item === "string") : [],
       buyerTypes: Array.isArray(group.buyerTypes) ? group.buyerTypes.filter((item) => typeof item === "string") : [],
       priceTags: Array.isArray(group.priceTags) ? group.priceTags.filter((item) => typeof item === "string") : [],
-      collapsed: Boolean(group.collapsed)
+      pricing: {
+        min: String(group.pricing?.min ?? ""),
+        max: String(group.pricing?.max ?? ""),
+        bidDifference: String(group.pricing?.bidDifference ?? "")
+      },
+      fees: Array.isArray(group.fees) && group.fees.length
+        ? group.fees.map((fee) => normalizeFee(fee))
+        : [normalizeFee({ name: "费用模块 1" })]
     }));
 
     return {
@@ -167,20 +176,6 @@
         status: raw.basic.status === "disabled" ? "disabled" : "enabled",
         expiryDate: String(raw.basic.expiryDate ?? "")
       },
-      pricing: {
-        min: String(raw.pricing.min ?? ""),
-        max: String(raw.pricing.max ?? ""),
-        bidDifference: String(raw.pricing.bidDifference ?? "")
-      },
-      fees: Array.isArray(raw.fees) && raw.fees.length
-        ? raw.fees.map((fee) => ({
-            id: typeof fee.id === "string" ? fee.id : newId("fee"),
-            name: String(fee.name ?? "费用模块"),
-            type: fee.type === "ratio" ? "ratio" : "fixed",
-            value: String(fee.value ?? ""),
-            cap: String(fee.cap ?? "")
-          }))
-        : [{ id: newId("fee"), name: "费用模块 1", type: "fixed", value: "", cap: "" }],
       groups,
       customBuyers: Array.isArray(raw.customBuyers)
         ? raw.customBuyers.filter((buyer) => buyer && buyer.id && buyer.name).map(cloneBuyer)
@@ -239,9 +234,6 @@
     document.querySelector("#config-description").value = state.basic.description;
     document.querySelector("#priority").value = state.basic.priority;
     document.querySelector("#expiry-date").value = state.basic.expiryDate;
-    document.querySelector("#min-price").value = state.pricing.min;
-    document.querySelector("#max-price").value = state.pricing.max;
-    document.querySelector("#bid-difference").value = state.pricing.bidDifference;
     const statusInput = document.querySelector(`input[name="status"][value="${state.basic.status}"]`);
     if (statusInput) statusInput.checked = true;
     updateDescriptionCount();
@@ -253,9 +245,6 @@
     state.basic.priority = document.querySelector("#priority").value;
     state.basic.expiryDate = document.querySelector("#expiry-date").value;
     state.basic.status = document.querySelector('input[name="status"]:checked')?.value || "enabled";
-    state.pricing.min = document.querySelector("#min-price").value;
-    state.pricing.max = document.querySelector("#max-price").value;
-    state.pricing.bidDifference = document.querySelector("#bid-difference").value;
   }
 
   function updateDescriptionCount() {
@@ -263,8 +252,8 @@
     elements.descriptionCount.textContent = `${length} / 200`;
   }
 
-  function renderFees() {
-    elements.feeList.innerHTML = state.fees.map((fee, index) => {
+  function renderFees(group) {
+    return group.fees.map((fee, index) => {
       const unit = fee.type === "ratio" ? "%" : "元";
       return `
         <div class="fee-row" data-fee-id="${escapeHtml(fee.id)}">
@@ -296,7 +285,7 @@
               <span>元</span>
             </div>
           </div>
-          <button class="remove-fee" type="button" data-action="remove-fee" data-fee-id="${escapeHtml(fee.id)}" aria-label="删除费用模块 ${index + 1}" title="删除费用"${state.fees.length === 1 ? " disabled" : ""}>
+          <button class="remove-fee" type="button" data-action="remove-fee" data-fee-id="${escapeHtml(fee.id)}" aria-label="删除费用模块 ${index + 1}" title="删除费用"${group.fees.length === 1 ? " disabled" : ""}>
             <svg viewBox="0 0 18 18" width="16" height="16" aria-hidden="true"><path d="M4 5h10M7 5V3h4v2m-6 0 .6 10h4.8L11 5M7.5 8v4.5M10.5 8v4.5" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
         </div>`;
@@ -310,9 +299,25 @@
     const activeIndex = state.groups.findIndex((group) => group.id === activeGroupId);
     const activeGroup = state.groups[activeIndex];
     elements.groupList.innerHTML = `
-      <div class="group-tabs-shell">
-        <div class="group-tabs" role="tablist" aria-label="配置组切换">
-          ${state.groups.map((group, index) => renderGroupTab(group, index, group.id === activeGroupId)).join("")}
+      <div class="group-switcher">
+        <div class="group-switcher-head">
+          <div class="switcher-title">
+            <span class="switcher-icon" aria-hidden="true">
+              <svg viewBox="0 0 18 18" width="14" height="14"><path d="M3 4.5h7M3 9h12M3 13.5h9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </span>
+            <strong>配置组切换</strong>
+            <span>点击 Tab 查看并编辑对应配置</span>
+          </div>
+          <span class="switcher-position">当前 <b>${activeIndex + 1}</b> / ${state.groups.length}</span>
+        </div>
+        <div class="group-tabs-row">
+          <div class="group-tabs" role="tablist" aria-label="配置组切换">
+            ${state.groups.map((group, index) => renderGroupTab(group, index, group.id === activeGroupId)).join("")}
+          </div>
+          <button class="tab-add" type="button" data-action="add-group-tab" aria-label="新增配置组 Tab" title="新增配置组 Tab">
+            <svg viewBox="0 0 18 18" width="15" height="15" aria-hidden="true"><path d="M9 4v10M4 9h10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+            <span>新增 Tab</span>
+          </button>
         </div>
       </div>
       ${activeGroup ? renderGroup(activeGroup, activeIndex) : ""}`;
@@ -337,10 +342,9 @@
         <span class="tab-index">${String(index + 1).padStart(2, "0")}</span>
         <span class="tab-copy">
           <strong>配置组 ${index + 1}</strong>
-          <small>${escapeHtml(tabSummary(group))}</small>
+          <small>${escapeHtml(tabSummary(group))} · ${statusText}</small>
         </span>
         <span class="tab-status" aria-hidden="true"></span>
-        <span class="sr-only">${statusText}</span>
       </button>`;
   }
 
@@ -351,7 +355,7 @@
       <article class="group-card group-panel" id="group-panel-${escapeHtml(group.id)}" role="tabpanel" aria-labelledby="group-tab-${escapeHtml(group.id)}" data-group-id="${escapeHtml(group.id)}" tabindex="0">
         <header class="group-panel-header">
           <div class="group-panel-heading">
-            <span class="panel-eyebrow">当前配置组</span>
+            <span class="panel-eyebrow">正在编辑 · TAB ${String(index + 1).padStart(2, "0")}</span>
             <span class="group-title-line">
               <strong>配置组 ${index + 1}</strong>
               <span class="group-state${complete ? "" : " incomplete"}">${complete ? "已配置" : "待完善"}</span>
@@ -407,6 +411,62 @@
               ${TAG_SUGGESTIONS.filter((tag) => !group.priceTags.includes(tag)).map((tag) => `<button class="suggestion-tag" type="button" data-action="add-tag" data-tag="${escapeHtml(tag)}">＋ ${escapeHtml(tag)}</button>`).join("")}
             </div>
           </div>
+
+          <section class="group-pricing" aria-label="配置组 ${index + 1} 价格与费用">
+            <div class="group-pricing-head">
+              <div class="group-pricing-title">
+                <span class="group-pricing-icon" aria-hidden="true">¥</span>
+                <span><strong>价格与费用</strong><small>随当前 Tab 独立保存</small></span>
+              </div>
+              <span class="group-scope">本组独立</span>
+            </div>
+
+            <div class="group-price-grid">
+              <div class="field" data-group-field="min">
+                <label for="min-price-${escapeHtml(group.id)}"><span class="required">*</span>最低价</label>
+                <div class="input-suffix">
+                  <span class="prefix">¥</span>
+                  <input id="min-price-${escapeHtml(group.id)}" type="number" min="0" step="1" value="${escapeHtml(group.pricing.min)}" placeholder="0" inputmode="numeric" data-group-price="min">
+                  <span>元</span>
+                </div>
+                <p class="field-error" data-group-error="min"></p>
+              </div>
+              <div class="field" data-group-field="max">
+                <label for="max-price-${escapeHtml(group.id)}"><span class="required">*</span>最高价</label>
+                <div class="input-suffix">
+                  <span class="prefix">¥</span>
+                  <input id="max-price-${escapeHtml(group.id)}" type="number" min="0" step="1" value="${escapeHtml(group.pricing.max)}" placeholder="500" inputmode="numeric" data-group-price="max">
+                  <span>元</span>
+                </div>
+                <p class="field-error" data-group-error="max"></p>
+              </div>
+              <div class="field" data-group-field="difference">
+                <label for="bid-difference-${escapeHtml(group.id)}"><span class="required">*</span>中标价差
+                  <button class="info-dot" type="button" aria-label="中标价差说明" data-tooltip="中标价差用于校准不同买家最终成交价的差额。">i</button>
+                </label>
+                <div class="input-suffix">
+                  <input id="bid-difference-${escapeHtml(group.id)}" type="number" min="0" step="0.01" value="${escapeHtml(group.pricing.bidDifference)}" placeholder="请输入金额" inputmode="decimal" data-group-price="bidDifference">
+                  <span>元</span>
+                </div>
+                <p class="field-error" data-group-error="difference"></p>
+              </div>
+            </div>
+
+            <div class="group-fee-block" data-group-field="fees">
+              <div class="group-fee-heading">
+                <div>
+                  <strong>费用规则</strong>
+                  <span>固定金额或成交价比例</span>
+                </div>
+                <button class="fee-add" type="button" data-action="add-fee" data-group-id="${escapeHtml(group.id)}">
+                  <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M8 3v10M3 8h10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  添加费用
+                </button>
+              </div>
+              <div class="fee-table" data-fee-list aria-live="polite">${renderFees(group)}</div>
+              <p class="field-error fee-list-error" data-group-error="fees"></p>
+            </div>
+          </section>
         </div>
       </article>`;
   }
@@ -465,29 +525,62 @@
   }
 
   function groupSummary(group) {
-    if (!group.buyers.length && !group.channels.length && !group.buyerTypes.length && !group.priceTags.length) {
-      return "尚未选择买家、渠道、买家类型与价格标签";
-    }
     const parts = [];
+    const range = priceRangeLabel(group);
+    if (range !== "价格待设置") parts.push(range);
     if (group.buyers.length) parts.push(`${group.buyers.length} 个买家`);
     if (group.channels.length) parts.push(`${group.channels.length} 个渠道`);
     if (group.buyerTypes.length) parts.push(group.buyerTypes.join("、"));
     if (group.priceTags.length) parts.push(group.priceTags.map((tag) => `#${tag}`).join(" "));
-    return parts.join(" · ") || "尚未完成配置";
+    return parts.join(" · ") || "尚未配置买家、渠道与价格";
   }
 
   function tabSummary(group) {
-    return `${group.buyers.length} 买家 · ${group.channels.length} 渠道`;
+    return `${priceRangeLabel(group, true)} · ${group.buyers.length} 买家 · ${group.channels.length} 渠道`;
+  }
+
+  function priceRangeLabel(group, compact = false) {
+    const min = toNumber(group.pricing?.min);
+    const max = toNumber(group.pricing?.max);
+    if (!Number.isFinite(min) || !Number.isFinite(max) || min < 0 || max < 0 || min > max) {
+      return "价格待设置";
+    }
+    if (compact) {
+      const format = (value) => Number(value).toLocaleString("zh-CN", { maximumFractionDigits: 2 });
+      return `¥${format(min)}–${format(max)}`;
+    }
+    return `${money(min)} – ${money(max)}`;
+  }
+
+  function getGroupValidation(group) {
+    const errors = {};
+    if (!group.buyers.length) errors.buyers = "请至少选择 1 个买家";
+    if (!group.channels.length) errors.channels = "请至少选择 1 个渠道";
+
+    const min = toNumber(group.pricing?.min);
+    if (!Number.isFinite(min) || min < 0) errors.min = "请输入有效的最低价";
+    const max = toNumber(group.pricing?.max);
+    if (!Number.isFinite(max) || max < 0) errors.max = "请输入有效的最高价";
+    if (Number.isFinite(min) && Number.isFinite(max) && min > max) {
+      errors.max = "最高价需大于或等于最低价";
+    }
+
+    const difference = toNumber(group.pricing?.bidDifference);
+    if (!Number.isFinite(difference) || difference < 0) errors.difference = "请输入有效的中标价差";
+
+    const feeIssues = getFeesValidation(group);
+    if (feeIssues.length) errors.fees = feeIssues[0];
+    return errors;
   }
 
   function hasRequiredGroupFields(group) {
-    return group.buyers.length > 0 && group.channels.length > 0;
+    return Object.keys(getGroupValidation(group)).length === 0;
   }
 
-  function getFeesValidation() {
+  function getFeesValidation(group) {
     const issues = [];
-    if (!state.fees.length) return ["至少保留一条费用规则"];
-    state.fees.forEach((fee, index) => {
+    if (!group.fees.length) return ["至少保留一条费用规则"];
+    group.fees.forEach((fee, index) => {
       if (!isFilled(fee.name)) issues.push(`费用模块 ${index + 1} 名称不能为空`);
       const value = toNumber(fee.value);
       if (!Number.isFinite(value) || value <= 0) {
@@ -508,19 +601,16 @@
     const priority = toNumber(state.basic.priority);
     const priorityValid = Number.isInteger(priority) && priority >= 1 && priority <= 999;
     const expiryValid = !state.basic.expiryDate || state.basic.expiryDate >= TODAY;
-    const min = toNumber(state.pricing.min);
-    const max = toNumber(state.pricing.max);
-    const difference = toNumber(state.pricing.bidDifference);
-    const rangeValid = Number.isFinite(min) && Number.isFinite(max) && min >= 0 && max >= 0 && min <= max;
-    const priceValid = rangeValid && Number.isFinite(difference) && difference >= 0 && getFeesValidation().length === 0;
     const groupsAdded = state.groups.length > 0;
-    const groupsComplete = groupsAdded && state.groups.every(hasRequiredGroupFields);
+    const groupChecks = state.groups.map(getGroupValidation);
+    const groupsComplete = groupsAdded && groupChecks.every((errors) => !errors.buyers && !errors.channels);
+    const pricesComplete = groupsAdded && groupChecks.every((errors) => !errors.min && !errors.max && !errors.difference && !errors.fees);
 
     return [
       { label: "基础信息已填写", pass: nameValid && priorityValid && expiryValid },
-      { label: "价格规则有效", pass: priceValid },
       { label: "配置组已添加", pass: groupsAdded, note: `${state.groups.length} 组` },
-      { label: "每组买家与渠道已选择", pass: groupsComplete }
+      { label: "每组买家与渠道已选择", pass: groupsComplete },
+      { label: "每组价格与费用有效", pass: pricesComplete }
     ];
   }
 
@@ -540,9 +630,12 @@
 
     elements.overviewName.textContent = isFilled(state.basic.name) ? state.basic.name : "未填写";
     elements.overviewPriority.textContent = isFilled(state.basic.priority) ? `${state.basic.priority} 级` : "未填写";
-    elements.overviewRange.textContent = isFilled(state.pricing.min) || isFilled(state.pricing.max)
-      ? `${money(state.pricing.min)} – ${money(state.pricing.max)}`
-      : "未填写";
+    const pricedGroups = state.groups.filter((group) => priceRangeLabel(group) !== "价格待设置");
+    elements.overviewRange.textContent = pricedGroups.length === 1
+      ? priceRangeLabel(pricedGroups[0])
+      : pricedGroups.length > 1
+        ? `${pricedGroups.length}/${state.groups.length} 组已设置`
+        : "未填写";
     elements.overviewGroupCount.textContent = `${state.groups.length} 组`;
     elements.overviewBuyerCount.textContent = `${uniqueCount(state.groups.flatMap((group) => group.buyers.map((buyer) => buyer.id)))} 个`;
     elements.overviewChannelCount.textContent = `${uniqueCount(state.groups.flatMap((group) => group.channels))} 个`;
@@ -587,6 +680,9 @@
     const field = card.querySelector(`[data-group-field="${kind}"]`);
     field?.classList.add("is-invalid");
     card.classList.add("is-invalid");
+    if (kind === "fees") {
+      card.querySelectorAll(".fee-row").forEach((row) => row.classList.add("is-invalid"));
+    }
     const errorNode = card.querySelector(`[data-group-error="${kind}"]`);
     if (errorNode) errorNode.textContent = message;
   }
@@ -612,34 +708,6 @@
       issueCount += 1;
     }
 
-    const min = toNumber(state.pricing.min);
-    if (!Number.isFinite(min) || min < 0) {
-      setFieldError("min-price", "请输入有效的最低价");
-      issueCount += 1;
-    }
-    const max = toNumber(state.pricing.max);
-    if (!Number.isFinite(max) || max < 0) {
-      setFieldError("max-price", "请输入有效的最高价");
-      issueCount += 1;
-    }
-    if (Number.isFinite(min) && Number.isFinite(max) && min > max) {
-      setFieldError("max-price", "最高价需大于或等于最低价");
-      issueCount += 1;
-    }
-    const difference = toNumber(state.pricing.bidDifference);
-    if (!Number.isFinite(difference) || difference < 0) {
-      setFieldError("bid-difference", "请输入有效的中标价差");
-      issueCount += 1;
-    }
-
-    const feeIssues = getFeesValidation();
-    if (feeIssues.length) {
-      const feeError = elements.form.querySelector('[data-error-for="fees"]');
-      if (feeError) feeError.textContent = feeIssues[0];
-      elements.feeList.querySelectorAll(".fee-row").forEach((row) => row.classList.add("is-invalid"));
-      issueCount += feeIssues.length;
-    }
-
     if (!state.groups.length) {
       const groupError = elements.form.querySelector('[data-error-for="groups"]');
       if (groupError) groupError.textContent = "请至少添加一个配置组";
@@ -648,16 +716,11 @@
 
     const invalidGroups = [];
     state.groups.forEach((group, index) => {
-      const errors = {};
-      if (!group.buyers.length) {
-        errors.buyers = `配置组 ${index + 1} 请至少选择 1 个买家`;
-        issueCount += 1;
-      }
-      if (!group.channels.length) {
-        errors.channels = `配置组 ${index + 1} 请至少选择 1 个渠道`;
-        issueCount += 1;
-      }
-      if (Object.keys(errors).length) invalidGroups.push({ group, index, errors });
+      const errors = getGroupValidation(group);
+      const errorCount = Object.keys(errors).length;
+      if (!errorCount) return;
+      issueCount += errorCount;
+      invalidGroups.push({ group, index, errors });
     });
 
     if (invalidGroups.length) {
@@ -704,6 +767,8 @@
       channels: [],
       buyerTypes: [],
       priceTags: [],
+      pricing: { min: "", max: "", bidDifference: "" },
+      fees: [normalizeFee({ name: "费用模块 1" })],
       collapsed: false
     };
     state.groups.push(group);
@@ -721,6 +786,8 @@
       channels: [...source.channels],
       buyerTypes: [...source.buyerTypes],
       priceTags: [...source.priceTags],
+      pricing: { ...source.pricing },
+      fees: source.fees.map((fee) => normalizeFee({ ...fee, id: newId("fee") })),
       collapsed: false
     };
   }
@@ -1088,7 +1155,7 @@
     if (!group || !title) return;
     const complete = hasRequiredGroupFields(group);
     title.innerHTML = `
-      <span class="panel-eyebrow">当前配置组</span>
+      <span class="panel-eyebrow">正在编辑 · TAB ${String(index + 1).padStart(2, "0")}</span>
       <span class="group-title-line">
         <strong>配置组 ${index + 1}</strong>
         <span class="group-state${complete ? "" : " incomplete"}">${complete ? "已配置" : "待完善"}</span>
@@ -1115,7 +1182,7 @@
       <div><dt>配置名称</dt><dd>${escapeHtml(state.basic.name)}</dd></div>
       <div><dt>配置组</dt><dd>${state.groups.length} 组</dd></div>
       <div><dt>覆盖买家</dt><dd>${buyerTotal} 个</dd></div>
-      <div><dt>报价区间</dt><dd>${escapeHtml(money(state.pricing.min))} – ${escapeHtml(money(state.pricing.max))}</dd></div>
+      <div><dt>价格规则</dt><dd>${state.groups.length} 组独立设置</dd></div>
       <div><dt>优先级</dt><dd>${escapeHtml(state.basic.priority)} 级</dd></div>`;
     elements.publishDialog.showModal();
   }
@@ -1197,13 +1264,25 @@
 
     elements.form.addEventListener("input", (event) => {
       const target = event.target;
-      if (elements.feeList.contains(target)) {
-        const row = target.closest(".fee-row");
-        const fee = state.fees.find((item) => item.id === row?.dataset.feeId);
-        if (!fee) return;
-        const field = target.dataset.feeField;
-        if (field === "name" || field === "value" || field === "cap") fee[field] = target.value;
+      const card = target.closest(".group-card");
+      const group = findGroup(card?.dataset.groupId);
+      if (group && target.matches("[data-group-price]")) {
+        const priceField = target.dataset.groupPrice;
+        if (Object.hasOwn(group.pricing, priceField)) group.pricing[priceField] = target.value;
         clearValidation();
+        updateGroupTitle(card);
+        markDirty();
+        updateSummary();
+        return;
+      }
+      if (group && target.matches("[data-fee-field]")) {
+        const row = target.closest(".fee-row");
+        const fee = group.fees.find((item) => item.id === row?.dataset.feeId);
+        if (!fee) return;
+        const feeField = target.dataset.feeField;
+        if (feeField === "name" || feeField === "value" || feeField === "cap") fee[feeField] = target.value;
+        clearValidation();
+        updateGroupTitle(card);
         markDirty();
         updateSummary();
         return;
@@ -1215,9 +1294,6 @@
         updateDescriptionCount();
       } else if (target.id === "priority") state.basic.priority = target.value;
       else if (target.id === "expiry-date") state.basic.expiryDate = target.value;
-      else if (target.id === "min-price") state.pricing.min = target.value;
-      else if (target.id === "max-price") state.pricing.max = target.value;
-      else if (target.id === "bid-difference") state.pricing.bidDifference = target.value;
       else return;
       clearValidation();
       markDirty();
@@ -1249,45 +1325,19 @@
         return;
       }
       if (target.matches('[data-fee-field="type"]')) {
+        const card = target.closest(".group-card");
+        const group = findGroup(card?.dataset.groupId);
         const row = target.closest(".fee-row");
-        const fee = state.fees.find((item) => item.id === row?.dataset.feeId);
+        const fee = group?.fees.find((item) => item.id === row?.dataset.feeId);
         if (!fee) return;
         fee.type = target.value === "ratio" ? "ratio" : "fixed";
         const unit = row.querySelector(".fee-unit");
         if (unit) unit.textContent = fee.type === "ratio" ? "%" : "元";
         clearValidation();
+        updateGroupTitle(card);
         markDirty();
         updateSummary();
       }
-    });
-
-    elements.addFee.addEventListener("click", () => {
-      const fee = {
-        id: newId("fee"),
-        name: `费用模块 ${state.fees.length + 1}`,
-        type: "fixed",
-        value: "",
-        cap: ""
-      };
-      state.fees.push(fee);
-      renderFees();
-      clearValidation();
-      markDirty();
-      updateSummary();
-      requestAnimationFrame(() => {
-        elements.feeList.querySelector(`[data-fee-id="${cssEscape(fee.id)}"] input[data-fee-field="value"]`)?.focus();
-      });
-    });
-
-    elements.feeList.addEventListener("click", (event) => {
-      const removeButton = event.target.closest('[data-action="remove-fee"]');
-      if (!removeButton || removeButton.disabled) return;
-      state.fees = state.fees.filter((fee) => fee.id !== removeButton.dataset.feeId);
-      renderFees();
-      clearValidation();
-      markDirty();
-      updateSummary();
-      showToast("已删除费用规则");
     });
 
     elements.addGroup.addEventListener("click", addBlankGroup);
@@ -1301,11 +1351,36 @@
         selectGroup(actionButton.dataset.groupId);
         return;
       }
+      if (action === "add-group-tab") {
+        addBlankGroup();
+        return;
+      }
       const card = actionButton.closest(".group-card");
       const group = findGroup(card?.dataset.groupId);
       if (!group) return;
 
-      if (action === "copy-group") {
+      if (action === "add-fee") {
+        const fee = normalizeFee({
+          name: `费用模块 ${group.fees.length + 1}`,
+          type: "fixed",
+          value: "",
+          cap: ""
+        });
+        group.fees.push(fee);
+        clearValidation();
+        renderGroups();
+        markDirty();
+        requestAnimationFrame(() => {
+          elements.groupList.querySelector(`[data-fee-id="${cssEscape(fee.id)}"] input[data-fee-field="value"]`)?.focus();
+        });
+      } else if (action === "remove-fee") {
+        if (actionButton.disabled) return;
+        group.fees = group.fees.filter((fee) => fee.id !== actionButton.dataset.feeId);
+        clearValidation();
+        renderGroups();
+        markDirty();
+        showToast("已删除当前配置组的费用规则");
+      } else if (action === "copy-group") {
         copyGroup(group.id);
       } else if (action === "remove-group") {
         removeGroup(group.id);
@@ -1481,7 +1556,6 @@
 
   function init() {
     hydrateBasicFields();
-    renderFees();
     renderGroups();
     hydrateSavedUi();
     bindEvents();
