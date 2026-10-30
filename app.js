@@ -256,22 +256,51 @@
     return group.fees.map((fee, index) => {
       const unit = fee.type === "ratio" ? "%" : "元";
       return `
-        <div class="fee-row" data-fee-id="${escapeHtml(fee.id)}">
-          <div class="field">
+        <div class="fee-row price-fee-row" data-fee-id="${escapeHtml(fee.id)}">
+          ${index === 0 ? `
+          <div class="field price-min-field" data-group-field="min">
+            <label><span class="required">*</span>最低价</label>
+            <div class="input-suffix">
+              <span class="prefix">¥</span>
+              <input type="number" min="0" step="1" value="${escapeHtml(group.pricing.min)}" placeholder="0" inputmode="numeric" data-group-price="min" aria-label="配置组最低价">
+              <span>元</span>
+            </div>
+            <p class="field-error" data-group-error="min"></p>
+          </div>
+          <div class="field price-max-field" data-group-field="max">
+            <label><span class="required">*</span>最高价</label>
+            <div class="input-suffix">
+              <span class="prefix">¥</span>
+              <input type="number" min="0" step="1" value="${escapeHtml(group.pricing.max)}" placeholder="500" inputmode="numeric" data-group-price="max" aria-label="配置组最高价">
+              <span>元</span>
+            </div>
+            <p class="field-error" data-group-error="max"></p>
+          </div>
+          <div class="field price-difference-field" data-group-field="difference">
+            <label><span class="required">*</span>中标价差
+              <button class="info-dot" type="button" aria-label="中标价差说明" data-tooltip="中标价差用于校准不同买家最终成交价的差额。">i</button>
+            </label>
+            <div class="input-suffix">
+              <input type="number" min="0" step="0.01" value="${escapeHtml(group.pricing.bidDifference)}" placeholder="差额" inputmode="decimal" data-group-price="bidDifference" aria-label="配置组中标价差">
+              <span>元</span>
+            </div>
+            <p class="field-error" data-group-error="difference"></p>
+          </div>` : '<div class="price-row-spacer" aria-hidden="true"><span>同组费用</span></div>'}
+          <div class="field fee-name-field">
             <label><span class="required">*</span>费用模块</label>
             <div class="fee-name-wrap">
               <span class="fee-index">${String(index + 1).padStart(2, "0")}</span>
               <input type="text" value="${escapeHtml(fee.name)}" maxlength="24" data-fee-field="name" aria-label="费用模块 ${index + 1} 名称">
             </div>
           </div>
-          <div class="field">
+          <div class="field fee-type-field">
             <label>计费方式</label>
             <select data-fee-field="type" aria-label="费用模块 ${index + 1} 计费方式">
               <option value="fixed"${fee.type === "fixed" ? " selected" : ""}>固定金额</option>
               <option value="ratio"${fee.type === "ratio" ? " selected" : ""}>成交价比例</option>
             </select>
           </div>
-          <div class="field">
+          <div class="field fee-value-field">
             <label><span class="required">*</span>金额 / 比例</label>
             <div class="input-suffix">
               <input type="number" min="0" step="0.01" value="${escapeHtml(fee.value)}" placeholder="请输入" data-fee-field="value" aria-label="费用模块 ${index + 1} 金额或比例">
@@ -416,53 +445,18 @@
             <div class="group-pricing-head">
               <div class="group-pricing-title">
                 <span class="group-pricing-icon" aria-hidden="true">¥</span>
-                <span><strong>价格与费用</strong><small>随当前 Tab 独立保存</small></span>
+                <span><strong>价格与费用</strong><small>价格、中标价差与费用随当前 Tab 独立保存</small></span>
               </div>
-              <span class="group-scope">本组独立</span>
-            </div>
-
-            <div class="group-price-grid">
-              <div class="field" data-group-field="min">
-                <label for="min-price-${escapeHtml(group.id)}"><span class="required">*</span>最低价</label>
-                <div class="input-suffix">
-                  <span class="prefix">¥</span>
-                  <input id="min-price-${escapeHtml(group.id)}" type="number" min="0" step="1" value="${escapeHtml(group.pricing.min)}" placeholder="0" inputmode="numeric" data-group-price="min">
-                  <span>元</span>
-                </div>
-                <p class="field-error" data-group-error="min"></p>
-              </div>
-              <div class="field" data-group-field="max">
-                <label for="max-price-${escapeHtml(group.id)}"><span class="required">*</span>最高价</label>
-                <div class="input-suffix">
-                  <span class="prefix">¥</span>
-                  <input id="max-price-${escapeHtml(group.id)}" type="number" min="0" step="1" value="${escapeHtml(group.pricing.max)}" placeholder="500" inputmode="numeric" data-group-price="max">
-                  <span>元</span>
-                </div>
-                <p class="field-error" data-group-error="max"></p>
-              </div>
-              <div class="field" data-group-field="difference">
-                <label for="bid-difference-${escapeHtml(group.id)}"><span class="required">*</span>中标价差
-                  <button class="info-dot" type="button" aria-label="中标价差说明" data-tooltip="中标价差用于校准不同买家最终成交价的差额。">i</button>
-                </label>
-                <div class="input-suffix">
-                  <input id="bid-difference-${escapeHtml(group.id)}" type="number" min="0" step="0.01" value="${escapeHtml(group.pricing.bidDifference)}" placeholder="请输入金额" inputmode="decimal" data-group-price="bidDifference">
-                  <span>元</span>
-                </div>
-                <p class="field-error" data-group-error="difference"></p>
-              </div>
-            </div>
-
-            <div class="group-fee-block" data-group-field="fees">
-              <div class="group-fee-heading">
-                <div>
-                  <strong>费用规则</strong>
-                  <span>固定金额或成交价比例</span>
-                </div>
+              <div class="group-pricing-actions">
                 <button class="fee-add" type="button" data-action="add-fee" data-group-id="${escapeHtml(group.id)}">
                   <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M8 3v10M3 8h10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
                   添加费用
                 </button>
+                <span class="group-scope">本组独立</span>
               </div>
+            </div>
+
+            <div class="group-fee-block" data-group-field="fees" aria-label="费用规则">
               <div class="fee-table" data-fee-list aria-live="polite">${renderFees(group)}</div>
               <p class="field-error fee-list-error" data-group-error="fees"></p>
             </div>

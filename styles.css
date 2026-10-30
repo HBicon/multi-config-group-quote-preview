@@ -749,18 +749,14 @@ input[type="date"] {
 
 .fee-table {
   display: grid;
-  gap: 9px;
+  gap: 6px;
 }
 
 .fee-row {
   display: grid;
-  grid-template-columns: minmax(150px, 1.25fr) minmax(105px, .8fr) minmax(125px, 1fr) minmax(120px, 1fr) 34px;
+  grid-template-columns: minmax(54px, .7fr) minmax(54px, .7fr) minmax(60px, .78fr) minmax(110px, 1.45fr) minmax(80px, .82fr) minmax(72px, .74fr) minmax(72px, .74fr) 28px;
   align-items: end;
-  gap: 10px;
-  padding: 13px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface-soft);
+  gap: 6px;
 }
 
 .fee-row .field {
@@ -768,19 +764,47 @@ input[type="date"] {
 }
 
 .fee-row .field > label {
-  margin-bottom: 6px;
-  font-size: 10.5px;
+  margin-bottom: 5px;
+  font-size: 10px;
 }
 
 .fee-row input,
 .fee-row select {
-  height: 38px;
+  height: 36px;
   background: var(--surface);
   font-size: 12px;
 }
 
+.fee-row input[type="number"] {
+  appearance: textfield;
+}
+
+.fee-row input[type="number"]::-webkit-inner-spin-button,
+.fee-row input[type="number"]::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
 .fee-row .input-suffix input {
-  padding-right: 34px;
+  padding-right: 30px;
+}
+
+.price-row-spacer {
+  display: flex;
+  height: 36px;
+  grid-column: 1 / span 3;
+  align-items: center;
+  padding-left: 2px;
+  color: var(--muted-2);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+
+.price-row-spacer span {
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, .7);
 }
 
 .fee-name-wrap {
@@ -809,8 +833,8 @@ input[type="date"] {
 
 .remove-fee {
   display: grid;
-  width: 34px;
-  height: 38px;
+  width: 30px;
+  height: 36px;
   place-items: center;
   border: 1px solid transparent;
   border-radius: 8px;
@@ -1372,7 +1396,7 @@ input[type="date"] {
 
 .group-pricing {
   min-width: 0;
-  padding: 14px;
+  padding: 12px 14px 14px;
   border: 1px solid #d8e7e1;
   border-radius: 11px;
   background: linear-gradient(110deg, rgba(242, 250, 247, .94), rgba(252, 253, 252, .96));
@@ -1383,7 +1407,7 @@ input[type="date"] {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 11px;
+  margin-bottom: 9px;
 }
 
 .group-pricing-title {
@@ -1424,6 +1448,13 @@ input[type="date"] {
   font-size: 9.5px;
 }
 
+.group-pricing-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 7px;
+}
+
 .group-scope {
   flex: none;
   padding: 3px 7px;
@@ -1435,49 +1466,8 @@ input[type="date"] {
   font-weight: 650;
 }
 
-.group-price-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px 12px;
-}
-
-.group-price-grid .field > label {
-  font-size: 11px;
-}
-
 .group-fee-block {
-  margin-top: 12px;
-  padding-top: 11px;
-  border-top: 1px solid #dce9e4;
-}
-
-.group-fee-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.group-fee-heading > div {
-  display: flex;
   min-width: 0;
-  align-items: baseline;
-  gap: 8px;
-}
-
-.group-fee-heading strong {
-  color: var(--ink-2);
-  font-size: 11.5px;
-  font-weight: 680;
-}
-
-.group-fee-heading span {
-  overflow: hidden;
-  color: var(--muted-2);
-  font-size: 9.5px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .fee-add {
@@ -1503,22 +1493,20 @@ input[type="date"] {
 }
 
 .group-pricing .fee-table {
-  gap: 7px;
+  gap: 5px;
 }
 
 .group-pricing .fee-row {
-  padding: 10px;
-  border-radius: 9px;
-  background: rgba(255, 255, 255, .82);
-}
-
-.group-pricing .fee-row input,
-.group-pricing .fee-row select {
-  height: 36px;
+  min-width: 0;
 }
 
 .group-pricing .fee-row.is-invalid {
-  border-color: #e2a7a3;
+  background: transparent;
+}
+
+.group-pricing .fee-row.is-invalid input,
+.group-pricing .fee-row.is-invalid select {
+  border-color: var(--danger);
   background: #fffafa;
 }
 
@@ -2700,7 +2688,7 @@ dialog.success-modal {
 
 @media (max-width: 1180px) {
   .workspace {
-    grid-template-columns: minmax(0, 1fr) 280px;
+    grid-template-columns: 1fr;
   }
 
   .page {
@@ -2720,24 +2708,47 @@ dialog.success-modal {
     grid-column: 1 / -1;
   }
 
-  .fee-row {
-    grid-template-columns: minmax(125px, 1.2fr) minmax(95px, .7fr) minmax(110px, 1fr) minmax(100px, .9fr) 34px;
+  .sidebar {
+    position: static;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .fee-row .fee-cap-field {
+  .guide-card {
     grid-column: auto;
-  }
-
-  .fee-row .remove-fee {
-    grid-column: auto;
-    grid-row: auto;
-    justify-self: end;
   }
 }
 
 @media (max-width: 980px) {
   .topnav {
     gap: 18px;
+  }
+
+  .fee-row .input-suffix input {
+    padding-right: 22px;
+  }
+
+  .fee-row .input-suffix > span:not(.prefix) {
+    right: 7px;
+    font-size: 10.5px;
+  }
+
+  .price-min-field .prefix,
+  .price-max-field .prefix {
+    display: none;
+  }
+
+  .price-min-field .input-suffix > .prefix + input,
+  .price-max-field .input-suffix > .prefix + input {
+    padding-left: 9px;
+  }
+
+  .price-difference-field > label {
+    font-size: 9.5px;
+    white-space: nowrap;
+  }
+
+  .price-difference-field .info-dot {
+    display: none;
   }
 
   .workspace {
@@ -2853,19 +2864,25 @@ dialog.success-modal {
     padding: 12px;
   }
 
-  .group-price-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+  .group-pricing-head {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 7px 10px;
   }
 
-  .group-fee-heading {
-    align-items: flex-start;
+  .group-pricing-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .fee-row {
-    grid-template-columns: 1fr 34px;
+    grid-template-columns: minmax(0, 1fr) 30px;
+    grid-template-rows: repeat(7, auto);
     align-items: start;
-    padding: 12px;
+  }
+
+  .fee-row:not(:first-child) {
+    grid-template-rows: repeat(4, auto);
   }
 
   .fee-row > .field {
@@ -2878,8 +2895,13 @@ dialog.success-modal {
 
   .fee-row .remove-fee {
     grid-column: 2;
-    grid-row: 1;
+    grid-row: 1 / -1;
+    align-self: end;
     justify-self: end;
+  }
+
+  .price-row-spacer {
+    display: none;
   }
 
   .groups-heading {
@@ -3132,17 +3154,8 @@ dialog.success-modal {
     font-size: 10px;
   }
 
-  .group-price-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .group-fee-heading > div {
-    display: block;
-  }
-
-  .group-fee-heading span {
-    display: block;
-    margin-top: 1px;
+  .group-pricing-title small {
+    display: none;
   }
 
   .group-summary {
