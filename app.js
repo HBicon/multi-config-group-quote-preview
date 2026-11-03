@@ -2,7 +2,7 @@
   "use strict";
 
   const STORAGE_KEY = "multi-group-quote-config-prototype-v4";
-  const PAGE_VERSION = 2;
+  const PAGE_VERSION = 3;
   const TODAY = new Date().toISOString().slice(0, 10);
 
   const CHANNELS = [
@@ -39,6 +39,7 @@
     pageStatus: document.querySelector("#page-status"),
     savedState: document.querySelector("#saved-state"),
     descriptionCount: document.querySelector("#description-count"),
+    globalChannelPicker: document.querySelector("#global-channel-picker"),
     groupList: document.querySelector("#group-list"),
     groupCount: document.querySelector("#group-count"),
     addGroup: document.querySelector("#add-group"),
@@ -93,6 +94,7 @@
         name: "华东手机高价回收策略",
         description: "面向华东核心渠道的高价机型回收报价配置。",
         priority: "10",
+        channels: ["闲鱼", "回收宝", "京东", "抖音"],
         status: "enabled",
         expiryDate: "2027-10-28"
       },
@@ -100,7 +102,6 @@
         {
           id: newId("group"),
           buyers: [cloneBuyer(BUYER_DIRECTORY[0]), cloneBuyer(BUYER_DIRECTORY[3])],
-          channels: ["闲鱼", "回收宝"],
           buyerTypes: ["商家买家"],
           priceTags: ["高价", "核心渠道"],
           pricing: { min: "1", max: "500", bidDifference: "20" },
@@ -109,7 +110,6 @@
         {
           id: newId("group"),
           buyers: [cloneBuyer(BUYER_DIRECTORY[1]), cloneBuyer(BUYER_DIRECTORY[2])],
-          channels: ["京东", "抖音"],
           buyerTypes: ["渠道服务商"],
           priceTags: ["中高价"],
           pricing: { min: "501", max: "2000", bidDifference: "30" },
@@ -145,16 +145,22 @@
   }
 
   function normalizeState(raw) {
-    if (!raw || raw.version !== PAGE_VERSION || !Array.isArray(raw.groups) || !raw.basic) {
+    if (!raw || ![2, PAGE_VERSION].includes(raw.version) || !Array.isArray(raw.groups) || !raw.basic) {
       return null;
     }
+
+    const legacyChannels = raw.groups.flatMap((group) => (
+      Array.isArray(group.channels) ? group.channels.filter((item) => typeof item === "string") : []
+    ));
+    const channels = Array.isArray(raw.basic.channels)
+      ? raw.basic.channels.filter((item) => typeof item === "string")
+      : [...new Set(legacyChannels)];
 
     const groups = raw.groups.map((group) => ({
       id: typeof group.id === "string" ? group.id : newId("group"),
       buyers: Array.isArray(group.buyers)
         ? group.buyers.filter((buyer) => buyer && buyer.id && buyer.name).map(cloneBuyer)
         : [],
-      channels: Array.isArray(group.channels) ? group.channels.filter((item) => typeof item === "string") : [],
       buyerTypes: Array.isArray(group.buyerTypes) ? group.buyerTypes.filter((item) => typeof item === "string") : [],
       priceTags: Array.isArray(group.priceTags) ? group.priceTags.filter((item) => typeof item === "string") : [],
       pricing: {
@@ -173,6 +179,7 @@
         name: String(raw.basic.name ?? ""),
         description: String(raw.basic.description ?? ""),
         priority: String(raw.basic.priority ?? ""),
+        channels,
         status: raw.basic.status === "disabled" ? "disabled" : "enabled",
         expiryDate: String(raw.basic.expiryDate ?? "")
       },
@@ -236,7 +243,46 @@
     document.querySelector("#expiry-date").value = state.basic.expiryDate;
     const statusInput = document.querySelector(`input[name="status"][value="${state.basic.status}"]`);
     if (statusInput) statusInput.checked = true;
+    renderGlobalChannelPicker();
     updateDescriptionCount();
+  }
+
+  function renderGlobalChannelPicker() {
+    const values = state.basic.channels;
+    elements.globalChannelPicker.innerHTML = `
+      <div class="multi-select" data-multi-kind="channels">
+        <button class="select-trigger" type="button" data-action="toggle-menu" aria-expanded="false" aria-label="选择应用渠道">
+          <span class="select-value">${renderSelectedValues(values, CHANNELS)}</span>
+          <svg viewBox="0 0 18 18" width="15" height="15" aria-hidden="true"><path d="m5 7 4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="select-menu" hidden>
+          <div class="select-menu-list">
+            ${CHANNELS.map((option) => `
+              <label class="check-option">
+                <input type="checkbox" data-action="select-option" data-basic-kind="channels" value="${escapeHtml(option.value)}"${values.includes(option.value) ? " checked" : ""}>
+                <span>${escapeHtml(option.label)}</span>
+                <small>${escapeHtml(option.note)}</small>
+              </label>`).join("")}
+          </div>
+          <div class="select-menu-footer">
+            <span>已选 ${values.length} 项</span>
+            <button type="button" data-action="clear-global-channels">清空</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function updateGlobalChannelUi() {
+    const values = state.basic.channels;
+    const select = elements.globalChannelPicker.querySelector(".multi-select");
+    if (!select) return;
+    const valueContainer = select.querySelector(".select-value");
+    if (valueContainer) valueContainer.innerHTML = renderSelectedValues(values, CHANNELS);
+    select.querySelectorAll('input[data-basic-kind="channels"]').forEach((checkbox) => {
+      checkbox.checked = values.includes(checkbox.value);
+    });
+    const footer = select.querySelector(".select-menu-footer span");
+    if (footer) footer.textContent = `已选 ${values.length} 项`;
   }
 
   function syncBasicFromDom() {
@@ -423,7 +469,6 @@
             <p class="field-error buyer-error" data-group-error="buyers"></p>
           </div>
 
-          ${renderMultiSelectField(group, "channels", "应用渠道", CHANNELS)}
           ${renderMultiSelectField(group, "buyerTypes", "买家类型", BUYER_TYPES)}
 
           <div class="field tag-field">
@@ -523,14 +568,13 @@
     const range = priceRangeLabel(group);
     if (range !== "价格待设置") parts.push(range);
     if (group.buyers.length) parts.push(`${group.buyers.length} 个买家`);
-    if (group.channels.length) parts.push(`${group.channels.length} 个渠道`);
     if (group.buyerTypes.length) parts.push(group.buyerTypes.join("、"));
     if (group.priceTags.length) parts.push(group.priceTags.map((tag) => `#${tag}`).join(" "));
-    return parts.join(" · ") || "尚未配置买家、渠道与价格";
+    return parts.join(" · ") || "尚未配置买家与价格";
   }
 
   function tabSummary(group) {
-    return `${priceRangeLabel(group, true)} · ${group.buyers.length} 买家 · ${group.channels.length} 渠道`;
+    return `${priceRangeLabel(group, true)} · ${group.buyers.length} 买家`;
   }
 
   function priceRangeLabel(group, compact = false) {
@@ -549,7 +593,6 @@
   function getGroupValidation(group) {
     const errors = {};
     if (!group.buyers.length) errors.buyers = "请至少选择 1 个买家";
-    if (!group.channels.length) errors.channels = "请至少选择 1 个渠道";
 
     const min = toNumber(group.pricing?.min);
     if (!Number.isFinite(min) || min < 0) errors.min = "请输入有效的最低价";
@@ -595,15 +638,16 @@
     const priority = toNumber(state.basic.priority);
     const priorityValid = Number.isInteger(priority) && priority >= 1 && priority <= 999;
     const expiryValid = !state.basic.expiryDate || state.basic.expiryDate >= TODAY;
+    const channelsValid = state.basic.channels.length > 0;
     const groupsAdded = state.groups.length > 0;
     const groupChecks = state.groups.map(getGroupValidation);
-    const groupsComplete = groupsAdded && groupChecks.every((errors) => !errors.buyers && !errors.channels);
+    const groupsComplete = groupsAdded && groupChecks.every((errors) => !errors.buyers);
     const pricesComplete = groupsAdded && groupChecks.every((errors) => !errors.min && !errors.max && !errors.difference && !errors.fees);
 
     return [
-      { label: "基础信息已填写", pass: nameValid && priorityValid && expiryValid },
+      { label: "基础信息与应用渠道已填写", pass: nameValid && priorityValid && expiryValid && channelsValid },
       { label: "配置组已添加", pass: groupsAdded, note: `${state.groups.length} 组` },
-      { label: "每组买家与渠道已选择", pass: groupsComplete },
+      { label: "每组买家已选择", pass: groupsComplete },
       { label: "每组价格与费用有效", pass: pricesComplete }
     ];
   }
@@ -632,7 +676,7 @@
         : "未填写";
     elements.overviewGroupCount.textContent = `${state.groups.length} 组`;
     elements.overviewBuyerCount.textContent = `${uniqueCount(state.groups.flatMap((group) => group.buyers.map((buyer) => buyer.id)))} 个`;
-    elements.overviewChannelCount.textContent = `${uniqueCount(state.groups.flatMap((group) => group.channels))} 个`;
+    elements.overviewChannelCount.textContent = `${state.basic.channels.length} 个`;
     elements.copyLastGroup.disabled = state.groups.length === 0;
   }
 
@@ -670,6 +714,13 @@
     if (errorNode) errorNode.textContent = message;
   }
 
+  function setBasicFieldError(kind, message) {
+    const field = elements.form.querySelector(`[data-basic-field="${kind}"]`);
+    field?.classList.add("is-invalid");
+    const errorNode = elements.form.querySelector(`[data-error-for="${kind}"]`);
+    if (errorNode) errorNode.textContent = message;
+  }
+
   function setGroupFieldError(card, kind, message) {
     const field = card.querySelector(`[data-group-field="${kind}"]`);
     field?.classList.add("is-invalid");
@@ -688,6 +739,11 @@
 
     if (!isFilled(state.basic.name)) {
       setFieldError("config-name", "请输入配置名称");
+      issueCount += 1;
+    }
+
+    if (!state.basic.channels.length) {
+      setBasicFieldError("channels", "请至少选择 1 个应用渠道");
       issueCount += 1;
     }
 
@@ -758,7 +814,6 @@
     const group = {
       id: newId("group"),
       buyers: [],
-      channels: [],
       buyerTypes: [],
       priceTags: [],
       pricing: { min: "", max: "", bidDifference: "" },
@@ -777,7 +832,6 @@
     return {
       id: newId("group"),
       buyers: source.buyers.map(cloneBuyer),
-      channels: [...source.channels],
       buyerTypes: [...source.buyerTypes],
       priceTags: [...source.priceTags],
       pricing: { ...source.pricing },
@@ -1121,7 +1175,7 @@
   }
 
   function closeAllMenus(except = null) {
-    elements.groupList.querySelectorAll(".multi-select").forEach((menu) => {
+    document.querySelectorAll(".multi-select").forEach((menu) => {
       if (menu === except) return;
       menu.querySelector(".select-trigger")?.setAttribute("aria-expanded", "false");
       const menuPanel = menu.querySelector(".select-menu");
@@ -1131,7 +1185,7 @@
 
   function updateMultiSelectUi(card, kind) {
     const group = findGroup(card.dataset.groupId);
-    const options = kind === "channels" ? CHANNELS : BUYER_TYPES;
+    const options = BUYER_TYPES;
     const values = group[kind];
     const select = card.querySelector(`.multi-select[data-multi-kind="${kind}"]`);
     if (!select) return;
@@ -1174,6 +1228,7 @@
     const buyerTotal = uniqueCount(state.groups.flatMap((group) => group.buyers.map((buyer) => buyer.id)));
     elements.publishSummary.innerHTML = `
       <div><dt>配置名称</dt><dd>${escapeHtml(state.basic.name)}</dd></div>
+      <div><dt>应用渠道</dt><dd>${escapeHtml(state.basic.channels.join("、"))}</dd></div>
       <div><dt>配置组</dt><dd>${state.groups.length} 组</dd></div>
       <div><dt>覆盖买家</dt><dd>${buyerTotal} 个</dd></div>
       <div><dt>价格规则</dt><dd>${state.groups.length} 组独立设置</dd></div>
@@ -1256,6 +1311,27 @@
   function bindEvents() {
     elements.form.addEventListener("submit", (event) => event.preventDefault());
 
+    elements.form.addEventListener("click", (event) => {
+      const basicField = event.target.closest('[data-basic-field="channels"]');
+      const actionButton = event.target.closest("[data-action]");
+      if (!basicField || !actionButton) return;
+      const action = actionButton.dataset.action;
+      if (action === "toggle-menu") {
+        const wrapper = actionButton.closest(".multi-select");
+        const menu = wrapper.querySelector(".select-menu");
+        const willOpen = menu.hidden;
+        closeAllMenus(wrapper);
+        menu.hidden = !willOpen;
+        actionButton.setAttribute("aria-expanded", String(willOpen));
+      } else if (action === "clear-global-channels") {
+        state.basic.channels = [];
+        clearValidation();
+        updateGlobalChannelUi();
+        markDirty();
+        updateSummary();
+      }
+    });
+
     elements.form.addEventListener("input", (event) => {
       const target = event.target;
       const card = target.closest(".group-card");
@@ -1304,6 +1380,19 @@
         return;
       }
       if (target.matches('[data-action="select-option"]')) {
+        if (target.dataset.basicKind === "channels") {
+          const selected = new Set(state.basic.channels);
+          if (target.checked) selected.add(target.value);
+          else selected.delete(target.value);
+          state.basic.channels = CHANNELS
+            .filter((option) => selected.has(option.value))
+            .map((option) => option.value);
+          clearValidation();
+          updateGlobalChannelUi();
+          markDirty();
+          updateSummary();
+          return;
+        }
         const card = target.closest(".group-card");
         const group = findGroup(card?.dataset.groupId);
         const kind = target.dataset.kind;

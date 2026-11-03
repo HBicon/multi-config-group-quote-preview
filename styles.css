@@ -1384,7 +1384,7 @@ input[type="date"] {
 
 .group-body {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 15px 16px;
   padding: 16px;
   border-top: 1px solid var(--line);
@@ -1661,8 +1661,18 @@ input[type="date"] {
   margin-top: 5px;
 }
 
+.basic-channels-field .select-menu {
+  max-height: min(280px, 45vh);
+  overflow-y: auto;
+}
+
 .multi-select {
   position: relative;
+  z-index: 13;
+}
+
+.multi-select:has(.select-trigger[aria-expanded="true"]) {
+  z-index: 35;
 }
 
 .select-trigger {
@@ -2702,10 +2712,6 @@ dialog.success-modal {
 
   .group-body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .tag-field {
-    grid-column: 1 / -1;
   }
 
   .sidebar {
