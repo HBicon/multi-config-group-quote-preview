@@ -2,7 +2,7 @@
   "use strict";
 
   const STORAGE_KEY = "multi-group-quote-config-prototype-v4";
-  const PAGE_VERSION = 4;
+  const PAGE_VERSION = 5;
   const TODAY = new Date().toISOString().slice(0, 10);
 
   const CHANNELS = [
@@ -46,7 +46,6 @@
     summaryValue: document.querySelector("#completion-value"),
     checkList: document.querySelector("#check-list"),
     overviewName: document.querySelector("#overview-name"),
-    overviewPriority: document.querySelector("#overview-priority"),
     overviewRange: document.querySelector("#overview-range"),
     overviewGroupCount: document.querySelector("#overview-group-count"),
     overviewBuyerCount: document.querySelector("#overview-buyer-count"),
@@ -91,7 +90,6 @@
       basic: {
         name: "华东手机高价回收策略",
         description: "面向华东核心渠道的高价机型回收报价配置。",
-        priority: "10",
         channels: ["闲鱼", "回收宝", "京东", "抖音"],
         status: "enabled",
         expiryDate: "2027-10-28"
@@ -141,7 +139,7 @@
   }
 
   function normalizeState(raw) {
-    if (!raw || ![2, 3, PAGE_VERSION].includes(raw.version) || !Array.isArray(raw.groups) || !raw.basic) {
+    if (!raw || ![2, 3, 4, PAGE_VERSION].includes(raw.version) || !Array.isArray(raw.groups) || !raw.basic) {
       return null;
     }
 
@@ -173,7 +171,6 @@
       basic: {
         name: String(raw.basic.name ?? ""),
         description: String(raw.basic.description ?? ""),
-        priority: String(raw.basic.priority ?? ""),
         channels,
         status: raw.basic.status === "disabled" ? "disabled" : "enabled",
         expiryDate: String(raw.basic.expiryDate ?? "")
@@ -234,7 +231,6 @@
   function hydrateBasicFields() {
     document.querySelector("#config-name").value = state.basic.name;
     document.querySelector("#config-description").value = state.basic.description;
-    document.querySelector("#priority").value = state.basic.priority;
     document.querySelector("#expiry-date").value = state.basic.expiryDate;
     const statusInput = document.querySelector(`input[name="status"][value="${state.basic.status}"]`);
     if (statusInput) statusInput.checked = true;
@@ -283,7 +279,6 @@
   function syncBasicFromDom() {
     state.basic.name = document.querySelector("#config-name").value;
     state.basic.description = document.querySelector("#config-description").value;
-    state.basic.priority = document.querySelector("#priority").value;
     state.basic.expiryDate = document.querySelector("#expiry-date").value;
     state.basic.status = document.querySelector('input[name="status"]:checked')?.value || "enabled";
   }
@@ -609,8 +604,6 @@
 
   function getSummaryChecks() {
     const nameValid = isFilled(state.basic.name);
-    const priority = toNumber(state.basic.priority);
-    const priorityValid = Number.isInteger(priority) && priority >= 1 && priority <= 999;
     const expiryValid = !state.basic.expiryDate || state.basic.expiryDate >= TODAY;
     const channelsValid = state.basic.channels.length > 0;
     const groupsAdded = state.groups.length > 0;
@@ -619,7 +612,7 @@
     const pricesComplete = groupsAdded && groupChecks.every((errors) => !errors.min && !errors.max && !errors.difference && !errors.fees);
 
     return [
-      { label: "基础信息与应用渠道已填写", pass: nameValid && priorityValid && expiryValid && channelsValid },
+      { label: "基础信息与应用渠道已填写", pass: nameValid && expiryValid && channelsValid },
       { label: "配置组已添加", pass: groupsAdded, note: `${state.groups.length} 组` },
       { label: "每组买家已选择", pass: groupsComplete },
       { label: "每组价格与费用有效", pass: pricesComplete }
@@ -641,7 +634,6 @@
       </div>`).join("");
 
     elements.overviewName.textContent = isFilled(state.basic.name) ? state.basic.name : "未填写";
-    elements.overviewPriority.textContent = isFilled(state.basic.priority) ? `${state.basic.priority} 级` : "未填写";
     const pricedGroups = state.groups.filter((group) => priceRangeLabel(group) !== "价格待设置");
     elements.overviewRange.textContent = pricedGroups.length === 1
       ? priceRangeLabel(pricedGroups[0])
@@ -718,12 +710,6 @@
 
     if (!state.basic.channels.length) {
       setBasicFieldError("channels", "请至少选择 1 个应用渠道");
-      issueCount += 1;
-    }
-
-    const priority = toNumber(state.basic.priority);
-    if (!Number.isInteger(priority) || priority < 1 || priority > 999) {
-      setFieldError("priority", "请输入 1–999 之间的整数");
       issueCount += 1;
     }
 
@@ -1175,8 +1161,7 @@
       <div><dt>应用渠道</dt><dd>${escapeHtml(state.basic.channels.join("、"))}</dd></div>
       <div><dt>配置组</dt><dd>${state.groups.length} 组</dd></div>
       <div><dt>覆盖买家</dt><dd>${buyerTotal} 个</dd></div>
-      <div><dt>价格规则</dt><dd>${state.groups.length} 组独立设置</dd></div>
-      <div><dt>优先级</dt><dd>${escapeHtml(state.basic.priority)} 级</dd></div>`;
+      <div><dt>价格规则</dt><dd>${state.groups.length} 组独立设置</dd></div>`;
     elements.publishDialog.showModal();
   }
 
@@ -1305,7 +1290,7 @@
       else if (target.id === "config-description") {
         state.basic.description = target.value;
         updateDescriptionCount();
-      } else if (target.id === "priority") state.basic.priority = target.value;
+      }
       else if (target.id === "expiry-date") state.basic.expiryDate = target.value;
       else return;
       clearValidation();

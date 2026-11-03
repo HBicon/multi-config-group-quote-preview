@@ -6,8 +6,8 @@
   <meta name="description" content="多配置组报价配置交互原型：基础信息统一设置应用渠道，各组独立维护买家、买家类型、价格与费用。">
   <title>多配置组报价配置｜交互原型</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%230f766e'/%3E%3Cpath d='M18 20h28v9H18zm0 15h12v9H18zm17 0h11v9H35z' fill='white'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="styles.css?v=20261103-3">
-  <script src="app.js?v=20261103-3" defer></script>
+  <link rel="stylesheet" href="styles.css?v=20261103-4">
+  <script src="app.js?v=20261103-4" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">跳到主要内容</a>
@@ -61,7 +61,7 @@
             <div>
               <span class="section-kicker">01 · CONFIG</span>
               <h2 id="basic-title">基础信息</h2>
-              <p>用于识别配置、设置全局应用渠道，并控制优先级与生效状态。</p>
+              <p>用于识别配置、设置全局应用渠道，并控制生效状态。</p>
             </div>
           </div>
 
@@ -71,16 +71,6 @@
               <input id="config-name" name="configName" type="text" maxlength="60" placeholder="请输入配置名称" autocomplete="off">
               <p class="field-hint">建议包含业务范围与价格特征，最多 60 个字符。</p>
               <p class="field-error" data-error-for="config-name"></p>
-            </div>
-
-            <div class="field field-narrow">
-              <label for="priority"><span class="required">*</span>优先级</label>
-              <div class="input-suffix">
-                <input id="priority" name="priority" type="number" min="1" max="999" step="1" placeholder="请输入优先级" inputmode="numeric">
-                <span>级</span>
-              </div>
-              <p class="field-hint">数字越小，匹配优先级越高。</p>
-              <p class="field-error" data-error-for="priority"></p>
             </div>
 
             <div class="field field-wide basic-channels-field" data-basic-field="channels">
@@ -151,7 +141,6 @@
           <div class="summary-heading"><h2>配置概览</h2><span class="saved-state" id="saved-state">尚未保存</span></div>
           <dl class="overview-list">
             <div><dt>配置名称</dt><dd id="overview-name">未填写</dd></div>
-            <div><dt>优先级</dt><dd id="overview-priority">未填写</dd></div>
             <div><dt>价格区间</dt><dd id="overview-range">未填写</dd></div>
             <div><dt>配置组</dt><dd id="overview-group-count">0 组</dd></div>
             <div><dt>覆盖买家</dt><dd id="overview-buyer-count">0 个</dd></div>
@@ -162,7 +151,7 @@
         <section class="guide-card" aria-labelledby="guide-title">
           <h2 id="guide-title">怎么配置</h2>
           <ol>
-            <li><span>1</span><p>填写配置名称、优先级、应用渠道与生效状态。</p></li>
+            <li><span>1</span><p>填写配置名称、应用渠道与生效状态。</p></li>
             <li><span>2</span><p>在配置组 Tab 内设置买家、买家类型、价格与费用。</p></li>
             <li><span>3</span><p>用“复制上一组”或“复制本组”继承配置，再改差异项。</p></li>
           </ol>
@@ -258,7 +247,7 @@
       </header>
       <div class="publish-body">
         <div class="publish-icon" aria-hidden="true">✓</div>
-        <p>发布后，该配置将按优先级参与买家与渠道匹配。原型环境不会写入真实业务数据。</p>
+        <p>发布后，该配置将按应用渠道与配置组匹配买家。原型环境不会写入真实业务数据。</p>
         <dl class="publish-summary" id="publish-summary"></dl>
       </div>
       <footer class="modal-footer">

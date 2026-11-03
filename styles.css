@@ -475,7 +475,7 @@ h1 {
 }
 
 .basic-grid {
-  grid-template-columns: minmax(0, 1.6fr) minmax(170px, .7fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .field {
