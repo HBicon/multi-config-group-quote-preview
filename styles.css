@@ -1520,12 +1520,11 @@ input[type="date"] {
   grid-column: 1 / -1;
 }
 
-.tag-field {
-  grid-column: auto;
+.group-body > [data-group-field="buyerTypes"] {
+  grid-column: 1 / -1;
 }
 
-.buyer-heading-row,
-.tag-heading-row {
+.buyer-heading-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1533,8 +1532,7 @@ input[type="date"] {
   margin-bottom: 7px;
 }
 
-.buyer-heading-row .field-label,
-.tag-heading-row .field-label {
+.buyer-heading-row .field-label {
   margin-bottom: 0;
 }
 
@@ -1580,8 +1578,7 @@ input[type="date"] {
   border-color: #9fb1aa;
 }
 
-.buyer-chips,
-.tag-chips {
+.buyer-chips {
   display: flex;
   min-width: 0;
   flex: 1;
@@ -1608,8 +1605,7 @@ input[type="date"] {
   white-space: nowrap;
 }
 
-.buyer-chip button,
-.tag-chip button {
+.buyer-chip button {
   display: grid;
   width: 15px;
   height: 15px;
@@ -1624,8 +1620,7 @@ input[type="date"] {
   line-height: 1;
 }
 
-.buyer-chip button:hover,
-.tag-chip button:hover {
+.buyer-chip button:hover {
   color: var(--danger);
   background: #fae7e5;
 }
@@ -1814,83 +1809,6 @@ input[type="date"] {
 
 .select-menu-footer button:hover {
   background: var(--accent-soft);
-}
-
-.tag-editor {
-  display: flex;
-  min-height: 40px;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 8px;
-  border: 1px solid var(--line-strong);
-  border-radius: 9px;
-  background: var(--surface);
-  transition: border-color .15s ease, box-shadow .15s ease;
-}
-
-.tag-editor:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(15, 118, 110, .11);
-}
-
-.tag-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 5px 4px 8px;
-  border: 1px solid #e2e8e5;
-  border-radius: 6px;
-  color: #4c5f57;
-  background: #f5f7f6;
-  font-size: 10.5px;
-}
-
-.tag-input {
-  min-width: 130px;
-  height: 27px;
-  flex: 1;
-  padding: 0 3px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  font-size: 11px;
-}
-
-.tag-input:focus {
-  border: 0;
-  outline: 0;
-  box-shadow: none;
-}
-
-.tag-suggestions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin-top: 7px;
-}
-
-.tag-suggestions > span {
-  color: var(--muted-2);
-  font-size: 10px;
-}
-
-.suggestion-tag {
-  padding: 3px 7px;
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  color: var(--muted);
-  background: var(--surface);
-  cursor: pointer;
-  font-size: 10px;
-}
-
-.suggestion-tag:hover {
-  border-color: #a8c7bc;
-  color: var(--accent-dark);
-  background: var(--accent-pale);
 }
 
 .group-list-error {
@@ -2857,7 +2775,6 @@ dialog.success-modal {
   .field-wide,
   .field-full,
   .buyer-field,
-  .tag-field,
   .group-pricing {
     grid-column: auto;
   }

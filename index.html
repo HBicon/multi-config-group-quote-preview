@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="多配置组报价配置交互原型：基础信息统一设置应用渠道，各组独立维护买家、买家类型、价格标签、价格与费用。">
+  <meta name="description" content="多配置组报价配置交互原型：基础信息统一设置应用渠道，各组独立维护买家、买家类型、价格与费用。">
   <title>多配置组报价配置｜交互原型</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%230f766e'/%3E%3Cpath d='M18 20h28v9H18zm0 15h12v9H18zm17 0h11v9H35z' fill='white'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="styles.css?v=20261103-2">
-  <script src="app.js?v=20261103-2" defer></script>
+  <link rel="stylesheet" href="styles.css?v=20261103-3">
+  <script src="app.js?v=20261103-3" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">跳到主要内容</a>
@@ -40,7 +40,7 @@
           <span class="status-chip" id="page-status">未保存</span>
           <span class="demo-chip">示例数据</span>
         </div>
-        <p>一份配置统一设置应用渠道，并按需维护多个配置组。每组独立设置买家、买家类型、标签与价格费用，通过 Tab 快速切换。</p>
+        <p>一份配置统一设置应用渠道，并按需维护多个配置组。每组独立设置买家、买家类型与价格费用，通过 Tab 快速切换。</p>
       </div>
       <div class="heading-actions" aria-label="页面操作">
         <button class="button ghost" type="button" id="save-draft">
@@ -119,7 +119,7 @@
             <div>
               <span class="section-kicker">02 · GROUPS</span>
               <h2 id="groups-title">配置组 <span class="count-badge" id="group-count">0</span></h2>
-              <p>通过 Tab 切换维护多个配置组；应用渠道已在基础信息统一设置，组内独立维护买家、买家类型、价格标签、价格与费用。</p>
+              <p>通过 Tab 切换维护多个配置组；应用渠道已在基础信息统一设置，组内独立维护买家、买家类型、价格与费用。</p>
             </div>
             <div class="group-toolbar">
               <button class="button secondary compact" type="button" id="copy-last-group">
@@ -163,7 +163,7 @@
           <h2 id="guide-title">怎么配置</h2>
           <ol>
             <li><span>1</span><p>填写配置名称、优先级、应用渠道与生效状态。</p></li>
-            <li><span>2</span><p>在配置组 Tab 内设置买家、买家类型、标签、价格与费用。</p></li>
+            <li><span>2</span><p>在配置组 Tab 内设置买家、买家类型、价格与费用。</p></li>
             <li><span>3</span><p>用“复制上一组”或“复制本组”继承配置，再改差异项。</p></li>
           </ol>
           <p class="demo-note">本页为静态交互原型，全部买家、渠道和金额均为脱敏演示数据。</p>

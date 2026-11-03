@@ -2,7 +2,7 @@
   "use strict";
 
   const STORAGE_KEY = "multi-group-quote-config-prototype-v4";
-  const PAGE_VERSION = 3;
+  const PAGE_VERSION = 4;
   const TODAY = new Date().toISOString().slice(0, 10);
 
   const CHANNELS = [
@@ -31,8 +31,6 @@
     { id: "B-1007", name: "一诺回收", company: "无锡一诺再生资源有限公司", tag: "区域买家" },
     { id: "B-1008", name: "拾光数码", company: "合肥拾光数码贸易有限公司", tag: "渠道买家" }
   ];
-
-  const TAG_SUGGESTIONS = ["高价", "中高价", "渠道专享", "核心渠道", "新客价"];
 
   const elements = {
     form: document.querySelector("#config-form"),
@@ -103,7 +101,6 @@
           id: newId("group"),
           buyers: [cloneBuyer(BUYER_DIRECTORY[0]), cloneBuyer(BUYER_DIRECTORY[3])],
           buyerTypes: ["商家买家"],
-          priceTags: ["高价", "核心渠道"],
           pricing: { min: "1", max: "500", bidDifference: "20" },
           fees: [{ id: newId("fee"), name: "渠道服务费", type: "fixed", value: "12", cap: "50" }]
         },
@@ -111,7 +108,6 @@
           id: newId("group"),
           buyers: [cloneBuyer(BUYER_DIRECTORY[1]), cloneBuyer(BUYER_DIRECTORY[2])],
           buyerTypes: ["渠道服务商"],
-          priceTags: ["中高价"],
           pricing: { min: "501", max: "2000", bidDifference: "30" },
           fees: [{ id: newId("fee"), name: "平台服务费", type: "ratio", value: "1.5", cap: "30" }]
         }
@@ -145,7 +141,7 @@
   }
 
   function normalizeState(raw) {
-    if (!raw || ![2, PAGE_VERSION].includes(raw.version) || !Array.isArray(raw.groups) || !raw.basic) {
+    if (!raw || ![2, 3, PAGE_VERSION].includes(raw.version) || !Array.isArray(raw.groups) || !raw.basic) {
       return null;
     }
 
@@ -162,7 +158,6 @@
         ? group.buyers.filter((buyer) => buyer && buyer.id && buyer.name).map(cloneBuyer)
         : [],
       buyerTypes: Array.isArray(group.buyerTypes) ? group.buyerTypes.filter((item) => typeof item === "string") : [],
-      priceTags: Array.isArray(group.priceTags) ? group.priceTags.filter((item) => typeof item === "string") : [],
       pricing: {
         min: String(group.pricing?.min ?? ""),
         max: String(group.pricing?.max ?? ""),
@@ -471,21 +466,6 @@
 
           ${renderMultiSelectField(group, "buyerTypes", "买家类型", BUYER_TYPES)}
 
-          <div class="field tag-field">
-            <div class="tag-heading-row">
-              <span class="field-label">价格标签</span>
-              <span class="field-hint">选填，可输入后按回车添加</span>
-            </div>
-            <div class="tag-editor">
-              <div class="tag-chips">${renderTagChips(group)}</div>
-              <input class="tag-input" type="text" maxlength="16" placeholder="${group.priceTags.length ? "继续添加标签" : "请输入价格标签"}" data-tag-input aria-label="配置组 ${index + 1} 价格标签">
-            </div>
-            <div class="tag-suggestions">
-              <span>常用标签</span>
-              ${TAG_SUGGESTIONS.filter((tag) => !group.priceTags.includes(tag)).map((tag) => `<button class="suggestion-tag" type="button" data-action="add-tag" data-tag="${escapeHtml(tag)}">＋ ${escapeHtml(tag)}</button>`).join("")}
-            </div>
-          </div>
-
           <section class="group-pricing" aria-label="配置组 ${index + 1} 价格与费用">
             <div class="group-pricing-head">
               <div class="group-pricing-title">
@@ -519,11 +499,6 @@
         <span>${escapeHtml(buyer.name)}</span>
         <button type="button" data-action="remove-buyer" data-buyer-id="${escapeHtml(buyer.id)}" aria-label="移除买家 ${escapeHtml(buyer.name)}">×</button>
       </span>`).join("");
-  }
-
-  function renderTagChips(group) {
-    return group.priceTags.map((tag) => `
-      <span class="tag-chip">${escapeHtml(tag)}<button type="button" data-action="remove-tag" data-tag="${escapeHtml(tag)}" aria-label="移除价格标签 ${escapeHtml(tag)}">×</button></span>`).join("");
   }
 
   function renderMultiSelectField(group, kind, label, options) {
@@ -569,7 +544,6 @@
     if (range !== "价格待设置") parts.push(range);
     if (group.buyers.length) parts.push(`${group.buyers.length} 个买家`);
     if (group.buyerTypes.length) parts.push(group.buyerTypes.join("、"));
-    if (group.priceTags.length) parts.push(group.priceTags.map((tag) => `#${tag}`).join(" "));
     return parts.join(" · ") || "尚未配置买家与价格";
   }
 
@@ -815,7 +789,6 @@
       id: newId("group"),
       buyers: [],
       buyerTypes: [],
-      priceTags: [],
       pricing: { min: "", max: "", bidDifference: "" },
       fees: [normalizeFee({ name: "费用模块 1" })],
       collapsed: false
@@ -833,7 +806,6 @@
       id: newId("group"),
       buyers: source.buyers.map(cloneBuyer),
       buyerTypes: [...source.buyerTypes],
-      priceTags: [...source.priceTags],
       pricing: { ...source.pricing },
       fees: source.fees.map((fee) => normalizeFee({ ...fee, id: newId("fee") })),
       collapsed: false
@@ -1146,34 +1118,6 @@
     showToast(`已导出 ${group.buyers.length} 个买家`);
   }
 
-  function addPriceTag(group, rawTag) {
-    const tag = String(rawTag || "").trim().replace(/^#+/, "");
-    if (!tag) return;
-    if (tag.length > 16) {
-      showToast("价格标签不能超过 16 个字符", "error");
-      return;
-    }
-    if (group.priceTags.includes(tag)) {
-      showToast("该价格标签已存在", "error");
-      return;
-    }
-    if (group.priceTags.length >= 12) {
-      showToast("每个配置组最多添加 12 个价格标签", "error");
-      return;
-    }
-    group.priceTags.push(tag);
-    clearValidation();
-    renderGroups();
-    markDirty();
-  }
-
-  function removePriceTag(group, tag) {
-    group.priceTags = group.priceTags.filter((item) => item !== tag);
-    clearValidation();
-    renderGroups();
-    markDirty();
-  }
-
   function closeAllMenus(except = null) {
     document.querySelectorAll(".multi-select").forEach((menu) => {
       if (menu === except) return;
@@ -1357,7 +1301,6 @@
         updateSummary();
         return;
       }
-      if (target.matches("[data-tag-input]")) return;
       if (target.id === "config-name") state.basic.name = target.value;
       else if (target.id === "config-description") {
         state.basic.description = target.value;
@@ -1493,10 +1436,6 @@
         clearValidation();
         renderGroups();
         markDirty();
-      } else if (action === "add-tag") {
-        addPriceTag(group, actionButton.dataset.tag);
-      } else if (action === "remove-tag") {
-        removePriceTag(group, actionButton.dataset.tag);
       }
     });
 
@@ -1522,35 +1461,6 @@
         return;
       }
 
-      const input = event.target.closest("[data-tag-input]");
-      if (!input) return;
-      if (event.key === "Enter" || event.key === "," || event.key === "，") {
-        event.preventDefault();
-        const card = input.closest(".group-card");
-        const group = findGroup(card?.dataset.groupId);
-        const value = input.value;
-        input.value = "";
-        if (group) addPriceTag(group, value);
-      }
-    });
-
-    elements.groupList.addEventListener("focusout", (event) => {
-      const input = event.target.closest("[data-tag-input]");
-      if (!input || !input.value.trim()) return;
-      const card = input.closest(".group-card");
-      const group = findGroup(card?.dataset.groupId);
-      const value = input.value;
-      input.value = "";
-      if (!group) return;
-      if (event.relatedTarget instanceof Element && event.relatedTarget.closest('[role="tab"]')) {
-        window.setTimeout(() => addPriceTag(group, value), 0);
-      } else {
-        addPriceTag(group, value);
-      }
-    });
-
-    elements.groupList.addEventListener("mousedown", (event) => {
-      if (event.target.closest('[data-action="add-tag"]')) event.preventDefault();
     });
 
     document.addEventListener("click", (event) => {
